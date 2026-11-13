@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "registers": {"COMMAND": 0, "GENERATION": 4, "N": 16, "BASE0": 32, "CORE_CYCLES": 128, "DRAIN_CYCLES": 136},
+  "status": {"BUSY": 1, "CORE_DONE": 2, "DRAINED": 4, "ERROR": 8},
+  "counter_convention": "Unsigned 64-bit edge distance: start sampled at S, done sampled at D, core_cycles=D-S. Snapshots stable until next accepted start. Busy clears only after core done and all AR/RLAST, AW/B and WLAST/B counts balance.",
+  "suite_logical_base": 268435456,
+  "probe_logical_base": 1073741824,
+  "guard_bytes": 256,
+  "slab_bytes": 65536
+}

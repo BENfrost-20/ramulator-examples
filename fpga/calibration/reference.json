@@ -1,0 +1,7 @@
+{
+  "source": "read-only example kit memory_probe.c",
+  "sha256": "6024cdea628c67d37b48de49e5bcacca220d37e723a01bb5426f1ceab66a0a8c",
+  "rtl_frontend": "I386_CLANG16",
+  "suite_frontend": "I386_CLANG13",
+  "rtl_is_not_checked_in": true
+}

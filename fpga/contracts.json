@@ -1,0 +1,7 @@
+{
+  "supported_banked_probe_library_modules": {
+    "noc_addr_adapter": "8cf90a87c1227f7cbbb2381dd9d822fba1ed488dfb2968e3b7f0361a1350f636",
+    "noc_mapping_unit": "596f00f4299450a26e94e13ce7c6ec65c7a66b7f73f4efbe352ba020f5542b12"
+  },
+  "scope": "Recognized emitted Bambu implementation only; changed compaction or selection must be reviewed, not inferred generically."
+}

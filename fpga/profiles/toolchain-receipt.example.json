@@ -1,0 +1,10 @@
+{
+  "repository": "ferrandi/PandA-bambu",
+  "source_revision": "d1975e817a77ac3fe046ccb3adb471e05224ec81",
+  "binary_sha256": "REPLACE_WITH_INSTALLED_BAMBU_SHA256",
+  "build_evidence": "REPLACE_WITH_REPRODUCIBLE_BUILD_INSTALL_COMMANDS_AND_LOG_FINGERPRINTS",
+  "artifacts": {
+    "share/panda/libmdpi/mdpi_driver.cpp": "REPLACE_WITH_INSTALLED_FILE_SHA256",
+    "share/panda/libmdpi/Makefile.mk": "REPLACE_WITH_INSTALLED_FILE_SHA256"
+  }
+}

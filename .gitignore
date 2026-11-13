@@ -24,3 +24,13 @@ obj_dir/
 **/out*/
 **/polybench_axi_ram_*/
 **/vector_add_axi_ram_*/
+
+# Experimental FPGA builds/results, separate from golden pipeline.
+/.fpga/
+/fpga/local.json
+*.jou
+*.xclbin
+*.xo
+*.bit
+*.dcp
+*.wdb

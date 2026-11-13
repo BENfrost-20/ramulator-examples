@@ -1,0 +1,13 @@
+{
+  "board": "REPLACE",
+  "platform_sha256": "REPLACE_WITH_ACTUAL_HASH",
+  "part": "REPLACE_WITH_PLATFORM_PART",
+  "tool_release": "2024.2",
+  "shell_vbnv": "REPLACE_WITH_COMPATIBLE_DEPLOYMENT_SHELL",
+  "xrt_version": "REPLACE_WITH_VALIDATED_VERSION",
+  "kernel_mhz": 100,
+  "interface_clocks_mhz": [],
+  "memory_clocks_mhz": [],
+  "resources": {"HBM[0]": {"capacity_bytes": 0}, "HBM[1]": {"capacity_bytes": 0}},
+  "evidence": "REPLACE_WITH_PLATFORMINFO_REPORT_AND_RELEASE_COMPATIBILITY_EVIDENCE"
+}
