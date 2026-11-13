@@ -42,6 +42,25 @@ class DeploymentTests(unittest.TestCase):
         text,info=fixture();p,prefix=verify(text,info);self.assertEqual(prefix,['m_axi_0'])
         for old,new in [('input reset;','input [1:0] reset;'),("1'b0","1'b1"),('output [31:0] m_axi_0_wdata;','output [63:0] m_axi_0_wdata;')]:
             with self.assertRaises(ValueError):verify(text.replace(old,new),info)
+    def test_hardware_generation_needs_no_ramulator_config(self):
+        from types import SimpleNamespace
+        from fpga.run import generate
+        from fpga.prepare import layout
+        case=registry()['t02_single_read']
+        with tempfile.TemporaryDirectory() as td:
+            args=SimpleNamespace(board='xcu250',output=td)
+            def fake_run(argv,out,log):
+                hls=out/'hls';hls.mkdir()
+                (hls/(layout(case)['top']+'.v')).write_text('Generated tool fixture; not RTL simulation')
+                (hls/'panda_libtech.v').write_text('Fixture dependency')
+            with patch.dict(os.environ,{'CLOCK_PERIOD_NS':'10'},clear=True),patch('fpga.run.verify_bambu',return_value={'revision':'fixture'}),patch('fpga.run.capture',return_value={'exit_code':0,'output':'fixture'}),patch('fpga.run.run',side_effect=fake_run):
+                generate(case,args)
+            receipt=json.loads((Path(td)/case['name']/'generation.json').read_text())
+            self.assertEqual(receipt['period_ns'],10)
+            self.assertIn('--clock-period=10.0',receipt['argv'])
+            self.assertFalse(any('ramulator' in flag.lower() for flag in receipt['argv']))
+            self.assertTrue((Path(td)/case['name']/'snapshot/inputs/micro/pattern.c').is_file())
+
     def test_high_physical_addresses_and_compaction(self):
         for banked in (False,True):
             text,info=fixture(banked);p,prefix=verify(text,info)

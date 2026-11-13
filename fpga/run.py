@@ -20,7 +20,7 @@ from fpga.catalog import registry, select, SMALL
 from fpga.provenance import verify_bambu
 from fpga.prepare import ABI, digest, layout, make_abi_header, prepare
 from fpga.hostgen import write as hostgen
-from tools.execution import load_board_profiles, stage_case
+from tools.execution import load_board_profiles
 
 
 def write(path,data):
@@ -100,7 +100,8 @@ def run(argv,cwd,log):
 
 def generate(case,args):
     provenance=verify_bambu(tool('bambu'))
-    b,p=board(args.board);period=float(case.get('clock_period_ns',b['default_clock_ns']))
+    b,p=board(args.board);period=float(os.environ.get('CLOCK_PERIOD_NS') or case.get('clock_period_ns',b['default_clock_ns']))
+    if not math.isfinite(period) or period<=0:raise ValueError('CLOCK_PERIOD_NS must be positive and finite')
     out=Path(args.output).resolve()/case['name'];out.mkdir(parents=True,exist_ok=False)
     snapshot=out/'snapshot';snapshot.mkdir()
     if case['suite']=='calibration':
@@ -109,11 +110,16 @@ def generate(case,args):
         flags=[f.replace('@/fpga/calibration/memory_probe.c',str(snapshot/source.name)) for f in case['flags']]
         argv=[tool('bambu'),*flags,f"--device-name={b['bambu_device']}",f'--clock-period={period}',f'--output-directory={out}/hls']
     else:
-        # Shared staging preserves source trees, flags/macros, board, clock and YAML.
-        argv,yaml=stage_case(case,snapshot,None,tool('bambu'),b)
-        # Remove simulation-only requests; DUT flags remain unchanged.
-        argv=[a for a in argv if a not in ('--simulate','--enable-ramulator') and not a.startswith(('--simulator=','--generate-tb=','--tb-','--max-sim-cycles=','--output-directory='))]
-        argv.append(f'--output-directory={out}/hls')
+        # This focused subset has explicit source members. Hardware staging
+        # deliberately needs no Ramulator install, YAML or MDPI model build.
+        if case.get('archive') or case.get('trees'):raise ValueError('Hardware staging for archive/tree recipes is not implemented')
+        inputs=snapshot/'inputs'
+        for member in case['members']:
+            target=inputs/member;target.parent.mkdir(parents=True,exist_ok=True)
+            shutil.copyfile(ROOT/member,target)
+        flags=[f.replace('@/',str(inputs)+'/') for f in case['flags']]
+        flags=[f for f in flags if f not in ('--simulate','--enable-ramulator') and not f.startswith(('--simulator=','--generate-tb=','--tb-','--output-directory='))]
+        argv=[tool('bambu'),f"--device-name={b['bambu_device']}",f'--clock-period={period}',*flags,f'--output-directory={out}/hls']
     identity=capture([tool('bambu'),'--version'])
     if identity['exit_code']: raise ValueError('Bambu version check failed; see '+str(out))
     write(out/'generation.json',{'case':case['name'],'board':args.board,'period_ns':period,'argv':argv,'compiler':'I386_CLANG13',

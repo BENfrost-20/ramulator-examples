@@ -7,7 +7,7 @@ Build commands never run the host.
 
 ## Actual delivery status
 
-Eight native/oracle/packing checks pass (11 Python deployment tests also pass): `memory_probe_single`,
+Eight native/oracle/packing checks pass (12 Python deployment tests also pass): `memory_probe_single`,
 `memory_probe_banked`, `smoke_axi_1ch`, `t01_clock`, `t02_single_read`,
 `t03_read_after_write`, `t04_stream`, `t06_byte_lanes`. The supplied probe RTL
 matches the restricted interface checker, including two-bit banked IDs and
@@ -112,7 +112,9 @@ with installed binary/runtime hashes and build evidence. Generation checks sourc
 revision plus a matching unambiguous abbreviated/full revision banner, or the
 artifact receipt. It does not require the full SHA literally in `--version`. There is no Jesun fallback. Use that
 installation's `settings.sh` to resolve CLANG13.
-The repository's case flags remain CLANG13. The kit's CLANG16 RTL is usable only
+Hardware staging reads only the selected recipe source members and needs no
+Ramulator installation, YAML or MDPI build. `CLOCK_PERIOD_NS` is retained in
+both the actual command and generation receipt. The repository's case flags remain CLANG13. The kit's CLANG16 RTL is usable only
 as an explicitly identified reference fixture; it cannot satisfy a CLANG13
 board-generation receipt. Never substitute Vitis HLS.
 
