@@ -207,7 +207,7 @@ def render_wrapper(info,p,prefixes):
  .aw({handshake('aw')}),.w({handshake('w')}),.wlast({prefix}_wlast),.b({handshake('b')}),
  .arvalid({prefix}_arvalid),.awvalid({prefix}_awvalid),.wvalid({prefix}_wvalid),
  .rvalid({prefix}_rvalid),.bvalid({prefix}_bvalid),.accepted_idle(),.pending_requests(),
- .response_error(({handshake('r')} && |{prefix}_rresp)||({handshake('b')} && |{prefix}_bresp)),
+ .response_error(({handshake('r')} && {prefix}_rresp[1])||({handshake('b')} && {prefix}_bresp[1])),
  .drained(drained[{i}]),.error(errors[{i}]));''')
     lines.append(info['top']+' core('+',\n '.join(connects)+');\nendmodule\n')
     return '\n'.join(lines)
