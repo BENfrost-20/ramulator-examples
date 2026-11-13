@@ -70,6 +70,8 @@ regression uses 16 modeled channels. No existing preset/golden is changed here.
 * `hbm_v1_0` and `ddr4_v2_2` IP metadata are installed. HBM model files
   `HBM_questa.vp`, `HBM_vcs.vp`, `HBM_nc.vp`, `HBM_xsim.sv` exist. Their
   timing coverage was not established; no proprietary model source is copied.
+* A later metadata scan also found Vivado ML Enterprise **2025.03**, permanent,
+  in `Xilinx.lic`; effective checkout/part entitlement remains untested.
 * `Xilinx.24.lic` names Vivado ML Enterprise with version 2024.05 and permanent
   expiry. Vivado reports a 2024.11 tool-version limit: entitlement for this
   release is not proven. `lmstat` reported no SERVER lines (node-locked file);
@@ -269,3 +271,10 @@ Generated Ferrandi core/library identities must pass preparation and the
 actual-DUT functional test before attributing a stronger guarantee to a build.
 The wrapper always preserves the original core-done measurement and reports
 memory-boundary completion separately. Neither is labeled DRAM-cell drain.
+
+Audit exception: the initial `vitis_hls -version` invocation automatically
+updated `/data2/home/pelorosso/vitis_hls.log` at 15:35:44 on 13 November 2026.
+This was an unintended write during the read-only audit. The file was left
+intact; no further server tool execution, build, simulation, upload, installation,
+configuration change or board programming followed. License/model status
+continues to be based on read-only metadata, not a completed tool checkout.

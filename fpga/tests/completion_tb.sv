@@ -138,9 +138,17 @@ initial begin
   end
  join
  finish_check();
- // Sticky response error and reset after quiescence.
- @(negedge clk);response_error=1;@(negedge clk);response_error=0;
- if(!memory_error)$fatal(1,"Response error lost");
+ // Real tracker response error reaches the control status during a run.
+ fork
+  wr(0,1);
+  begin
+   wait(start_core);@(negedge clk);awvalid=1;awready=1;wvalid=1;wready=1;wlast_bit=1;
+   @(negedge clk);awvalid=0;wvalid=0;done_core=1;bvalid=1;bready=1;response_error=1;
+   @(negedge clk);done_core=0;bvalid=0;response_error=0;
+  end
+ join
+ finish_check();rd(0,value);
+ if(!memory_error||!value[3])$fatal(1,"Tracker response error missing from control status");
  @(negedge clk);resetn=0;repeat(3)@(negedge clk);resetn=1;
  rd(0,value);if(value!==0||!drained||memory_error)$fatal(1,"Quiescent reset");
  $display("COMPLETION TRACKER TEST PASS (legacy W-before-AW counterexample reproduced)");$finish;
