@@ -18,6 +18,18 @@
 #include <string>
 #include <thread>
 
+// Keep BOs alive even if register I/O throws while a kernel might still DMA.
+// Declared after the BO container, so this guard runs before BO destructors.
+struct InFlightGuard {
+ bool active=false;
+ ~InFlightGuard() {
+  if(active) {
+   std::cerr<<"Host error while accelerator may still run. BOs remain pinned. Recover/reset the device before terminating this process.\n";
+   for(;;)std::this_thread::sleep_for(std::chrono::seconds(1));
+  }
+ }
+};
+
 int main(int argc,char** argv) {
  try {
   if(argc<3 || argc>7) throw std::runtime_error("Usage: host XCLBIN DEVICE [N [REPETITIONS [TIMEOUT_SECONDS [RESULT.jsonl]]]]");
@@ -38,6 +50,7 @@ int main(int argc,char** argv) {
   auto args=ips[0].get_args();
   if(ip.read_register(abi::COMMAND)&abi::BUSY) throw std::runtime_error("Compute unit already busy; recover before allocation reuse");
   std::vector<std::unique_ptr<xrt::bo>> bos;
+  InFlightGuard in_flight;
   std::vector<int> topology(case_banks,-1);
   for(unsigned port=0;port<case_ports;++port) {
    unsigned b=base_register_bank[port];
@@ -79,7 +92,7 @@ int main(int argc,char** argv) {
    }
    auto input_dma_seconds=std::chrono::duration<double>(std::chrono::steady_clock::now()-input_begin).count();
    auto previous=ip.read_register(abi::GENERATION);
-   ip.write_register(abi::N,n);ip.write_register(abi::COMMAND,1);
+   ip.write_register(abi::N,n);in_flight.active=true;ip.write_register(abi::COMMAND,1);
    auto begin=std::chrono::steady_clock::now();std::uint32_t status=0;
    while(true) {
     status=ip.read_register(abi::COMMAND);
@@ -94,6 +107,7 @@ int main(int argc,char** argv) {
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
    }
+   in_flight.active=false;
    auto poll_seconds=std::chrono::duration<double>(std::chrono::steady_clock::now()-begin).count();
    auto output_begin=std::chrono::steady_clock::now();
    auto read64=[&](unsigned off){return std::uint64_t(ip.read_register(off))|(std::uint64_t(ip.read_register(off+4))<<32);};
