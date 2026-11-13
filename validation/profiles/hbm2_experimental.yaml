@@ -1,0 +1,25 @@
+# EXPERIMENTAL: one Ramulator HBM2 channel includes two pseudochannels.
+# Not a U55C HBM2e/platform match. At kernel=100 MHz, ratio=10 -> 1 GHz ticks.
+# Requires an installed MDPI bridge with verified ratio semantics.
+Frontend:
+  impl: GEM5
+MemorySystem:
+  impl: GenericDRAM
+  clock_ratio: 10
+  DRAM:
+    impl: HBM2
+    org:
+      preset: HBM2_4Gb
+      channel: 1
+    timing:
+      preset: HBM2_2Gbps
+  Controller:
+    impl: Generic
+    Scheduler:
+      impl: FRFCFS
+    RefreshManager:
+      impl: AllBank
+    RowPolicy:
+      impl: OpenRowPolicy
+  AddrMapper:
+    impl: RoBaRaCoCh

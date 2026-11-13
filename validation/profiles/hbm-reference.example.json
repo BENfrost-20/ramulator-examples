@@ -1,0 +1,37 @@
+{
+  "backend": "amd_hbm_axi3",
+  "board": "xcu55c",
+  "xci": "/REPLACE/one-port-hbm-2024.2.xci",
+  "xci_sha256": "REPLACE_WITH_VERIFIED_XCI_HASH",
+  "compiled_libraries": "/REPLACE/questa-2024.1-vivado-2024.2",
+  "simulator": "questa",
+  "simulator_release": "2024.1",
+  "ip_vlnv": "xilinx.com:ip:hbm:1.0",
+  "controller_axi": "SAXI_00",
+  "native_data_width": 256,
+  "native_addr_width": 33,
+  "native_id_width": 6,
+  "kernel_mhz": 100,
+  "memory_mhz": 0,
+  "apb_mhz": 0,
+  "reference_mhz": 0,
+  "physical_base": 4096,
+  "capacity_bytes": 0,
+  "reset_cycles": 32,
+  "max_kernel_cycles": 10000000,
+  "clock_pins": {"AXI_00_ACLK": "memory_clk", "APB_0_PCLK": "apb_clk", "HBM_REF_CLK_0": "reference_clk"},
+  "reset_pins": {"AXI_00_ARESET_N": "memory_resetn", "APB_0_PRESET_N": "apb_resetn"},
+  "idle_inputs": {
+    "APB_0_PADDR": {"width": 22, "value": 0},
+    "APB_0_PWDATA": {"width": 32, "value": 0},
+    "APB_0_PENABLE": {"width": 1, "value": 0},
+    "APB_0_PSEL": {"width": 1, "value": 0},
+    "APB_0_PWRITE": {"width": 1, "value": 0}
+  },
+  "initialization": {
+    "mode": "ip_autonomous_apb_idle",
+    "ready_pins": ["apb_complete_0"],
+    "evidence": "REPLACE_WITH_MATCHING_2024.2_IP_INIT_CONFIGURATION_AND_GUIDE_EVIDENCE"
+  },
+  "fidelity": {"read_latency": "unknown", "write_latency": "unknown", "bank_row": "unknown", "refresh": "unknown", "controller_policy": "unknown", "queues": "unknown"}
+}
