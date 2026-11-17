@@ -1,0 +1,76 @@
+{
+  "case": "smoke_axi_1ch",
+  "top": "vector_add",
+  "n": 8,
+  "bambu_revision": "622610fd517e38cd1fb7a47f1dfc3314314a1778",
+  "ramulator_revision": "9a8ed857455d041524043bc5fb45eb7f07e6a731",
+  "baseline_run": "run_20261117_164805_hbm-comparison-baseline",
+  "reference_run": "run_20261117_191951_121861",
+  "part": "xcu55c-fsvh2892-2L-e",
+  "kernel_period_ps": 10000,
+  "memory_axi_period_ps": 2222,
+  "memory_clock_mhz": 900,
+  "memory_data_rate_mbps": 1800,
+  "addresses": {
+    "vec_a": "0x01000040",
+    "vec_b": "0x01000100",
+    "vec_c": "0x010001c0"
+  },
+  "inputs_sha256": {
+    "smoke/test_vector_add.xml": "6a576fc9d966775a283a58f2755f1e63ae3dc8061bb000e7753ae207ee92fdaf",
+    "smoke/vector_add_axi.c": "435edaa1eb0a27e1f4d2a29b7c05919dc03a50db352594c11b7a3212a4765c5c"
+  },
+  "ramulator_yaml_sha256": "fe85a85039183183429d4e8dbfab9d2c4db2d6e197f2cdfde5e19a1cb0dd619f",
+  "input_files": [
+    "smoke/vector_add_axi.c",
+    "smoke/test_vector_add.xml",
+    "smoke/configs/hbm2_32ch.yaml"
+  ],
+  "performance_comparison_aligned": false,
+  "expected_reads": 16,
+  "expected_writes": 8,
+  "rtl_sha256": {
+    "vector_add.v": "dcb462ebe24d4bf288574cf4a8f6ab8e5920d2f84dbc00f13c85569b70ad4ef4",
+    "panda_libtech.v": "ee42bc0b686750318835fcadc8e1f328a959c37354f9a5d1a01c39c28409ee36"
+  },
+  "source_receipt": {
+    "prepare_integration.py": {
+      "working_source_sha256": "4fd782906863f2003229f5f7694ff3f3f67bd1af04e0a27f8e3addd253d8196b",
+      "versioned_sha256": "4fd782906863f2003229f5f7694ff3f3f67bd1af04e0a27f8e3addd253d8196b"
+    },
+    "run_integration.sh": {
+      "working_source_sha256": "d73db539f4c8cfff74b2dd20afde638b903f9f351c30acaf7c5630b94e8ad28f",
+      "versioned_sha256": "d73db539f4c8cfff74b2dd20afde638b903f9f351c30acaf7c5630b94e8ad28f"
+    },
+    "export_integration.tcl": {
+      "working_source_sha256": "00b1347194ce4c3ffb53e6fc9f292057d7a21909ea1d84f215fa889e10db32c0",
+      "versioned_sha256": "00b1347194ce4c3ffb53e6fc9f292057d7a21909ea1d84f215fa889e10db32c0"
+    },
+    "build_bridge.tcl": {
+      "working_source_sha256": "3a71192ddc655066f564ebdea99a262156207ffee353a6f9b9bad8c8694cc30c",
+      "packaging_note": "Bootstrap configuration updated to match the validated USER-free bridge; runtime project not regenerated.",
+      "versioned_sha256": "2c6da2db0be7117677a46c3f4ecedf951cf833ac86c2f622270bec50ce73b784"
+    },
+    "fix_bridge.tcl": {
+      "working_source_sha256": "48675270821dfe273b57fc79432e27c5d22e1de1f2bb41f7cf78977aaffe69a0",
+      "versioned_sha256": "48675270821dfe273b57fc79432e27c5d22e1de1f2bb41f7cf78977aaffe69a0"
+    },
+    "configure_hbm.tcl": {
+      "working_source_sha256": "79d81dc89d25c18c64330ce33d0fdade5f6601e90a259c9ea8b8602814e3506f",
+      "versioned_sha256": "79d81dc89d25c18c64330ce33d0fdade5f6601e90a259c9ea8b8602814e3506f"
+    },
+    "compile_base_libraries.tcl": {
+      "working_source_sha256": "92ff14321fa38a152d0b6d4d548de475b626e0aeb54b0f56cd8be930f545c840",
+      "versioned_sha256": "92ff14321fa38a152d0b6d4d548de475b626e0aeb54b0f56cd8be930f545c840"
+    },
+    "export_example_vcs.tcl": {
+      "working_source_sha256": "c47583c5a4c0ff5a6f64eab60f72a52e678491fa18034070e0ab89d4ea8f291a",
+      "versioned_sha256": "c47583c5a4c0ff5a6f64eab60f72a52e678491fa18034070e0ab89d4ea8f291a"
+    },
+    "create_hbm.tcl": {
+      "working_source_name": "inspect_hbm.tcl",
+      "working_source_sha256": "8518a60edd47df64ced5a15e55d931fdbfe8db33e6dc9e8da9d44e49a093a656",
+      "versioned_sha256": "8518a60edd47df64ced5a15e55d931fdbfe8db33e6dc9e8da9d44e49a093a656"
+    }
+  }
+}

@@ -1,0 +1,23 @@
+# This directory tracks source, configuration and minimal text evidence only.
+/build/
+/project/
+/bridge-project/
+/example/
+/integration-runs/
+/export-*/
+/simlibs-*/
+/.Xil/
+/integration-last-prepared.txt
+*.xpr
+*.bd
+*.hwh
+*.hwdef
+*.log
+*.jou
+*.lic
+*.pyc
+__pycache__/
+*_simv
+*.daidir/
+csrc/
+vcs_lib/

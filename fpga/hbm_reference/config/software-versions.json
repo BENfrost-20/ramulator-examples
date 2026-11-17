@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "observed_date": "2026-11-17",
+  "bambu": {
+    "version": "PandA 2026.11",
+    "revision": "622610fd517e38cd1fb7a47f1dfc3314314a1778",
+    "build_compiler": "GCC/G++ 13.1.0",
+    "local_configuration_patch": "bambu-boost-compat.patch"
+  },
+  "ramulator": {
+    "version": "2.0",
+    "revision": "9a8ed857455d041524043bc5fb45eb7f07e6a731",
+    "build_compiler": "G++ 13.1.0"
+  },
+  "clang_hls": {
+    "version": "13.0.1",
+    "revision": "75e33f71c2dae584b13a7d1186ae0a038ba98838"
+  },
+  "clang_host": {
+    "version": "19.1.7",
+    "revision": "cd708029e0b2869e80abe31ddb175f7c35361f90"
+  },
+  "verilator": {
+    "version": "5.052",
+    "revision": "v5.052-61-g983a06a16",
+    "note": "The installation directory is named verilator-5.030; its name is not the version."
+  },
+  "vivado": {
+    "version": "2024.2",
+    "software_build": "5239630",
+    "ip_build": "5239520",
+    "shared_data_build": "5239561"
+  },
+  "vcs": {
+    "version": "X-2025.06-SP2_Full64",
+    "build_date": "2025-12-01",
+    "target_arch": "linux64"
+  },
+  "amd_ip": {
+    "hbm": {
+      "vlnv": "xilinx.com:ip:hbm:1.0",
+      "revision": 16
+    },
+    "smartconnect": {
+      "vlnv": "xilinx.com:ip:smartconnect:1.0",
+      "revision": 25
+    }
+  },
+  "cmake": {
+    "version": "3.31.10"
+  },
+  "boost": {
+    "version": "1.83.0"
+  },
+  "yaml_cpp": {
+    "version": "0.7.0",
+    "source_tag": "yaml-cpp-0.7.0"
+  },
+  "argparse": {
+    "source_tag": "v2.9"
+  },
+  "vcs_link_compiler": {
+    "version": "G++ 9.4.0",
+    "package": "Ubuntu 9.4.0-1ubuntu1~20.04.2"
+  },
+  "gnu_binutils": {
+    "version": "2.34"
+  },
+  "gnu_make": {
+    "version": "4.2.1"
+  },
+  "python": {
+    "version": "3.8.10"
+  },
+  "bash": {
+    "version": "5.0.17"
+  },
+  "os": {
+    "distribution": "Ubuntu 20.04.6 LTS",
+    "kernel": "Linux 5.4.0-216-generic",
+    "architecture": "x86_64"
+  },
+  "compatibility_note": "Vivado 2024.2 reports a different supported VCS release (V-2023.12-SP1); successful execution is not certified support.",
+  "provenance": "Baseline metadata, CMake caches, installed headers, IP configurations and tool version banners; no executables or libraries included.",
+  "git": {
+    "version_banner": "git version 2.50.1"
+  },
+  "libc": {
+    "version_banner": "ldd (Ubuntu GLIBC 2.31-0ubuntu9.18) 2.31"
+  },
+  "vhdlan": {
+    "version": "X-2025.06-SP2 for linux64",
+    "source": "Successful VCS mixed-language compile transcript"
+  }
+}

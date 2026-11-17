@@ -1,5 +1,13 @@
 # Experimental Bambu FPGA deployment (2024.2)
 
+## Standalone HBM simulation update (17 November 2026)
+
+The source/configuration checkpoint in [hbm_reference/](hbm_reference/README.md)
+contains the actual three-master vector_add VCS/HBM smoke that passed two launches.
+Its minimal evidence and complete tool-version manifest are tracked there.
+It does not use the older probe ABI or establish FPGA deployment/performance
+equivalence. The historical deployment status below describes the earlier flow.
+
 This directory adds a focused deployment path. It does not change the shared
 runner, recipes, source snapshots, precision, golden approvals or board registry.
 Only the commands explicitly shown for host execution load/program a device.

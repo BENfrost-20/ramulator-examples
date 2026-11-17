@@ -1,0 +1,26 @@
+smoke_axi_1ch / vector_add / n=8
+Recorded: 2026-11-17
+Bambu revision: 622610fd517e38cd1fb7a47f1dfc3314314a1778
+Ramulator revision: 9a8ed857455d041524043bc5fb45eb7f07e6a731
+Baseline run: run_20261117_164805_hbm-comparison-baseline
+Baseline: PASS, 84 reported cycles, 16 reads, 8 writes
+AMD HBM run: run_20261117_191951_121861
+Kernel period: 10000 ps; HBM AXI period: 2222 ps
+HBM_READY: 48515 ns
+MEMORY_CHECK_OK run=1 completed=0 words=72
+RESULT_JSON {"run":1,"kernel_period_ps":10000,"memory_period_ps":2222,"start_done_cycles":601,"start_drain_cycles":601,"dut_reads":16,"dut_writes":8,"hbm_reads":16,"hbm_writes":8}
+MEMORY_CHECK_OK run=1 completed=1 words=72
+MEMORY_CHECK_OK run=2 completed=0 words=72
+RESULT_JSON {"run":2,"kernel_period_ps":10000,"memory_period_ps":2222,"start_done_cycles":634,"start_drain_cycles":634,"dut_reads":16,"dut_writes":8,"hbm_reads":16,"hbm_writes":8}
+MEMORY_CHECK_OK run=2 completed=1 words=72
+HBM_BAMBU_TEST_PASSED
+FUNCTIONAL_PASS: confirmed by results.json
+Performance comparison aligned: false
+Known warnings (original AMD example / integrated test):
+  tCHmax: 131313 / 1393865
+  IEEE1500 tWRSTL: 1 / 1
+  IEEE1500 tHF: 40 / 40
+  EMASA: 64 / 64
+Warning causes remain unresolved; functional PASS is not timing validation.
+Full integrated simulation.log SHA-256: 8691314ba5863de63af573091c64563a10d03737fb7c4d425b98b52f06161c72
+Full logs, generated RTL, simulators, IP models and libraries are deliberately excluded.
