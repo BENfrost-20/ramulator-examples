@@ -28,8 +28,8 @@ configuration. Run a suite directly or use `run_tests.sh` to execute several sui
 | `micro/` | Memory access patterns and reference checker |
 | `openmp/` | Functional kernels and the original test list |
 | `gapbs/` | Graph test list and pinned `sources/` submodule |
-| `polybench/` | Eight checked-in kernels with conditional AXI pragmas, headers, testbenches and utilities |
-| `machsuite/` | All 19 official MachSuite workloads, checked-in sources and AXI adapters; existing SpMV/BFS cases retained |
+| `polybench/` | Eight kernels from a pinned source submodule, with generated kernel/testbench adapters |
+| `machsuite/` | 19 official workloads from a pinned source submodule, with generated AXI/MDPI adapters |
 | `results/` | Manually approved versioned golden data and collection/comparison scripts |
 | `tools/` | Environment checks, input staging, local execution and golden comparison |
 
@@ -56,7 +56,7 @@ tools include Make, Git, Bash, Awk, `bc`, `envsubst`, `timeout` and the Binutils
 utilities `objcopy` and `readelf`. The runtime library check uses `ldd`.
 
 ```sh
-git clone --recursive https://github.com/gggg100/ramulator-examples.git
+git clone --recursive https://github.com/ferrandi/ramulator-examples.git
 cd ramulator-examples
 cp env.example.sh env.sh
 # Configure BAMBU_HLS and RAMULATOR2_DIR, then:
@@ -69,17 +69,14 @@ source env.sh
 ./machsuite/run.sh --tag machsuite
 ```
 
-GAPBS retains its pinned `sources/` submodule.
-For an existing checkout, initialize or restore the recorded submodule revision
-before running the graph suite (normal benchmark execution does not download sources):
+GAPBS, PolyBench and MachSuite use pinned `sources/` submodules. For an existing checkout:
 
 ```sh
-git submodule update --init --recursive gapbs/sources
+git submodule update --init --recursive gapbs/sources polybench/sources machsuite/sources
 ```
 
-PolyBench includes its sources and conditional AXI pragmas.
-MachSuite includes its pinned official sources and small AXI/MDPI adapters;
-it no longer requires `MachSuite_modified.zip` or `BENCHMARK_ARCHIVES`.
+PolyBench and MachSuite generate their adapters automatically before execution.
+The `smoke`, `micro` and `openmp` suites keep their local test sources.
 `RAMULATOR2_DIR` points to the prefix containing
 `include/ramulator/` and `lib/libramulator.so` (or `lib64/`).
 
@@ -106,7 +103,7 @@ then the selected board's default. For example:
 CLOCK_PERIOD_NS=10 ./smoke/run.sh --case smoke_axi_1ch
 ```
 
-PolyBench includes all eight original kernels in three profiles:
+PolyBench runs eight selected original kernels in three profiles:
 `native` (shared minimal bus, 1/2/4 channels), `axi` (1/2/4 channels) and `axi_tb` (one channel,
 with the utility compiled as part of the testbench). The two originally recorded
 cases retain their names `polybench_gemm` and `polybench_atax`.
@@ -116,24 +113,11 @@ cases retain their names `polybench_gemm` and `polybench_atax`.
 ./polybench/run.sh --case polybench_gemm_native_2ch
 ```
 
-MachSuite exposes all 19 official workloads plus the existing `machsuite_spmv`
-and `machsuite_bfs` compatibility cases. Its [suite README](machsuite/README.md)
-documents the pinned import, explicit backprop reference exception, checks and
-validation limits. The existing BFS case remains fixed to the matching scale-4,
-single-thread configuration. Native source checks and case listing work without
-a Bambu installation:
-
-```sh
-./machsuite/run.sh --list
-python3 machsuite/prepare.py --check
-python3 machsuite/validate.py
-# On the configured Linux Bambu/Ramulator host:
-./machsuite/run.sh --case machsuite_gemm_blocked --no-compare
-./machsuite/run.sh --tests 'machsuite_bfs_*' --no-compare
-```
-
-The source-path migration and additional cases can create new configuration
-hashes. Review hardware runs through the existing manual golden-approval process.
+MachSuite includes all 19 official workloads. Its launcher generates the AXI
+kernels and MDPI support from the pinned sources before execution. Use
+`./machsuite/run.sh --list` to list cases and `--tests 'machsuite_spmv_*'` to
+select a family. The [suite README](machsuite/README.md) describes preparation,
+functional checks and the dedicated backprop reference.
 
 GAPBS keeps the original undirected graph. Its incoming-graph argument positions
 are retained for compatibility; the loader only reads the outgoing graph files.

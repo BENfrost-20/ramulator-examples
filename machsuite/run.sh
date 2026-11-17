@@ -13,10 +13,12 @@ suite_dir = Path(os.environ["RAMULATOR_SUITE_DIR"])
 sys.path.insert(0, str(suite_dir.parent))
 from tools.execution import run_suite
 from machsuite.cases import COMMON_FLAGS, cases
+from machsuite.prepare import prepare
 
 if sys.argv[1:] == ['--list']:
     for case in cases():
         print(case['name'])
 else:
+    prepare()
     sys.exit(run_suite('machsuite', cases, common_flags=COMMON_FLAGS))
 PYTHON

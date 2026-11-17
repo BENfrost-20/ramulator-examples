@@ -15,15 +15,20 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from machsuite.cases import BENCHMARKS, COMMON_FLAGS, SUITE, cases
-from machsuite.prepare import BANNER, generate, prepare
+from machsuite.prepare import BANNER, UPSTREAM_COMMIT, generate, prepare
 from tools import execution
 
 
 class IntegrationTests(unittest.TestCase):
-    def test_complete_official_snapshot_and_reproducible_adapters(self):
-        self.assertEqual(prepare(check=True), (204, 38))
-        manifest = json.loads((SUITE / 'UPSTREAM.json').read_text())
-        self.assertEqual(len(manifest['files']), 204)
+    @classmethod
+    def setUpClass(cls):
+        prepare()
+
+    def test_pinned_submodule_and_reproducible_adapters(self):
+        revision = subprocess.check_output(['git', '-C', str(SUITE / 'sources'),
+                                            'rev-parse', 'HEAD'], text=True).strip()
+        self.assertEqual(revision, UPSTREAM_COMMIT)
+        self.assertEqual(prepare(check=True), 38)
 
     def test_kernel_bodies_are_official_with_only_conditional_pragmas(self):
         for spec in BENCHMARKS:
@@ -31,6 +36,8 @@ class IntegrationTests(unittest.TestCase):
                 generated = generate(spec, SUITE / 'sources')['kernel.c']
                 stripped = re.sub(r'#ifdef MACHSUITE_USE_AXI\n.*?#endif\n', '',
                                   generated[len(BANNER):], flags=re.S)
+                stripped = stripped.replace('#if defined(__BAMBU_SIM__) && defined(__clang__)\n'
+                                            '__attribute__((optnone))\n#endif\n', '')
                 original = SUITE / 'sources' / spec['path'] / (spec['kernel'] + '.c')
                 self.assertEqual(stripped, original.read_text())
 
@@ -51,8 +58,8 @@ class IntegrationTests(unittest.TestCase):
         profile = dict(default_ramulator_yaml='smoke/configs/ddr4_1ch.yaml',
                        default_clock_ns=5.0, bambu_device='xcu250-2Lfigd2104')
         entries = list(cases())
-        self.assertEqual(len(entries), 21)
-        self.assertEqual(len({case['name'] for case in entries}), 21)
+        self.assertEqual(len(entries), 19)
+        self.assertEqual(len({case['name'] for case in entries}), 19)
         with tempfile.TemporaryDirectory() as temporary, patch.object(execution, 'ROOT', SUITE.parent):
             for case in entries:
                 with self.subTest(case=case['name']):
@@ -75,27 +82,28 @@ class IntegrationTests(unittest.TestCase):
                     info = json.loads((snapshot / 'inputs.json').read_text())
                     self.assertEqual(len(info['inputs_sha256']), len(case['members']))
 
-    def test_compatibility_cases_and_explicit_backprop_reference(self):
+    def test_official_cases_and_explicit_backprop_reference(self):
         entries = {case['name']: case for case in cases()}
-        self.assertIn('machsuite_spmv', entries)
-        bfs = entries['machsuite_bfs']
-        for flag in ('-DSCALE=4', '-DEDGE_FACTOR=4', '-DTHREAD_NUMBER=1'):
-            self.assertIn(flag, bfs['flags'])
-        self.assertIn('/data/scale4/', bfs['byte_check'])
+        self.assertNotIn('machsuite_spmv', entries)
+        self.assertNotIn('machsuite_bfs', entries)
         backprop = entries['machsuite_backprop']
         self.assertIn('--tb-arg=@/machsuite/references/backprop/check.data', backprop['flags'])
         self.assertIn('machsuite/sources/backprop/backprop/check.data', backprop['members'])
-        legacy = json.loads((SUITE / 'LEGACY.json').read_text())
-        for relative, expected in legacy['files'].items():
-            self.assertEqual(hashlib.sha256((SUITE / relative).read_bytes()).hexdigest(), expected)
+        reference = SUITE / 'references/backprop/check.data'
+        self.assertEqual(hashlib.sha256(reference.read_bytes()).hexdigest(),
+                         'dbc72d8ea7b1ee95b9cbac1788278d5e4418a7704976f43e57b1464827a27b57')
 
 
 @unittest.skipUnless(shutil.which('cc'), 'C compiler required for checker regression tests')
 class CheckerTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        prepare()
+
     def compile_and_run(self, name, body):
         spec = next(item for item in BENCHMARKS if item['name'] == name)
         source = SUITE / 'sources' / spec['path']
-        adapter = SUITE / 'adapters' / spec['path']
+        adapter = SUITE / 'build/adapters' / spec['path']
         with tempfile.TemporaryDirectory() as temporary:
             work = Path(temporary)
             driver = work / 'driver.c'

@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: Apache-2.0
-"""Verify the pinned official snapshot and regenerate the small HLS adapters."""
+"""Generate AXI kernels and MDPI test support from the pinned MachSuite submodule."""
 import argparse
-import hashlib
-import json
 from pathlib import Path
 import re
+import subprocess
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -92,10 +91,16 @@ def generate(spec, sources):
     matches = list(re.finditer(pattern, kernel, re.MULTILINE))
     if len(matches) != 1:
         raise ValueError('Expected one top definition for ' + spec['name'])
-    pragmas = '#ifdef MACHSUITE_USE_AXI\n'
+    # Backprop defines offset as a numeric macro. Hide it only while parsing
+    # the HLS annotations, then restore it for the unchanged kernel body.
+    pragmas = '#ifdef MACHSUITE_USE_AXI\n#pragma push_macro("offset")\n#undef offset\n'
     for port, _, _ in spec['ports']:
         pragmas += '#pragma HLS interface port=' + port + ' mode=m_axi offset=direct\n'
-    pragmas += '#endif\n'
+    pragmas += '#pragma pop_macro("offset")\n#endif\n'
+    if spec['name'] == 'md_grid':
+        # Clang 13 loop-flatten crashes when optimizing this native reference.
+        # HLS does not define __BAMBU_SIM__, so its optimization is unchanged.
+        pragmas += '#if defined(__BAMBU_SIM__) && defined(__clang__)\n__attribute__((optnone))\n#endif\n'
     position = matches[0].start()
     kernel = BANNER + kernel[:position] + pragmas + kernel[position:]
 
@@ -123,52 +128,41 @@ def generate(spec, sources):
     return {'kernel.c': kernel, 'local_support.c': support}
 
 
-def pinned_sources(directory):
-    manifest = json.loads((SUITE / 'UPSTREAM.json').read_text())
-    content = {}
-    for relative, expected in manifest['files'].items():
-        path = directory / relative
-        data = path.read_bytes()
-        if hashlib.sha256(data).hexdigest() != expected:
-            raise ValueError('Pinned upstream hash mismatch: ' + relative)
-        content[relative] = data
-    return content
+UPSTREAM_COMMIT = '6236e593012cb86b0d2f08d9fb9ba0411ff989b4'
 
 
-def prepare(check=False, import_from=None):
+def prepare(check=False):
     sources = SUITE / 'sources'
-    content = pinned_sources(import_from or sources)
+    if not (sources / 'common/harness.c').is_file():
+        raise ValueError('Initialize MachSuite with: git submodule update --init machsuite/sources')
+    revision = subprocess.check_output(['git', '-C', str(sources), 'rev-parse', 'HEAD'], text=True).strip()
+    if revision != UPSTREAM_COMMIT:
+        raise ValueError('MachSuite must be at the pinned commit ' + UPSTREAM_COMMIT)
+    if subprocess.run(['git', '-C', str(sources), 'diff', '--quiet', 'HEAD', '--']).returncode:
+        raise ValueError('MachSuite source submodule has local changes; restore the pinned sources first')
     generated = {}
     for spec in BENCHMARKS:
-        for filename, text in generate(spec, import_from or sources).items():
-            generated[SUITE / 'adapters' / spec['path'] / filename] = text
+        for filename, text in generate(spec, sources).items():
+            generated[SUITE / 'build/adapters' / spec['path'] / filename] = text
     if check:
         different = [str(path.relative_to(SUITE)) for path, text in generated.items()
                      if not path.is_file() or path.read_bytes() != text.encode()]
         if different:
-            raise ValueError('Regenerate adapters: ' + ', '.join(different))
+            raise ValueError('Regenerate adapters: python3 machsuite/prepare.py')
     else:
-        if import_from:
-            for relative, data in content.items():
-                path = sources / relative
-                path.parent.mkdir(parents=True, exist_ok=True)
-                path.write_bytes(data)
         for path, text in generated.items():
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(text)
-    return len(content), len(generated)
+            if not path.is_file() or path.read_text() != text:
+                path.write_text(text)
+    return len(generated)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--check', action='store_true', help='Verify hashes and adapter contents without writing')
-    parser.add_argument('--import-from', type=Path, help='Reimport the pinned official checkout (no download)')
+    parser.add_argument('--check', action='store_true', help='Verify generated adapters without writing')
     args = parser.parse_args()
-    if args.check and args.import_from:
-        parser.error('--check and --import-from are mutually exclusive')
     try:
-        upstream, adapters = prepare(args.check, args.import_from)
-        print('%s %d official files and %d adapter files.' %
-              ('Verified' if args.check else 'Prepared', upstream, adapters))
-    except (OSError, ValueError) as exc:
+        count = prepare(args.check)
+        print(('%s %d MachSuite adapter files.') % ('Verified' if args.check else 'Prepared', count))
+    except (OSError, ValueError, subprocess.CalledProcessError) as exc:
         sys.exit(str(exc))
