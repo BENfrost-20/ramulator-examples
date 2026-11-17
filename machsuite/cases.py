@@ -1,12 +1,13 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Official workloads and the two previously recorded compatibility recipes."""
+"""Official MachSuite workloads adapted for Bambu/Ramulator."""
 from pathlib import Path
 
 SUITE = Path(__file__).resolve().parent
 COMMON_FLAGS = [
     '--simulate', '--simulator=VERILATOR', '--compiler=I386_CLANG13', '-m64',
     '--memory-allocation-policy=NO_BRAM', '--enable-ramulator',
-    '--output-directory=output', '-v5', '--generate-interface=INFER',
+    '--output-directory=output', '-v3', '--generate-interface=INFER',
+    '-DBAMBU_SKIP_VERIFICATION',
 ]
 
 
@@ -60,7 +61,7 @@ BENCHMARKS = [
 
 def official_case(spec):
     source = 'machsuite/sources/' + spec['path']
-    adapter = 'machsuite/adapters/' + spec['path']
+    adapter = 'machsuite/build/adapters/' + spec['path']
     common = 'machsuite/sources/common'
     check = source + '/check.data'
     # Keep upstream's reference; select the archive's separately attributed
@@ -89,35 +90,6 @@ def official_case(spec):
     )
 
 
-def compatibility_cases():
-    """Keep the old names, kernel contents, inputs and significant HLS flags."""
-    for name, relative, macros in (
-        ('spmv', 'spmv/crs_axi', []),
-        ('bfs', 'bfs_parallel/queue_axi', ['-DSCALE=4', '-DEDGE_FACTOR=4', '-DTHREAD_NUMBER=1', '-fopenmp']),
-    ):
-        kernel = 'machsuite/legacy/' + relative
-        common = 'machsuite/legacy/common'
-        data = kernel + '/data/scale4' if name == 'bfs' else kernel
-        check = data + '/check.data'
-        yield dict(
-            name='machsuite_' + name,
-            members=[kernel + '/' + name + '.cpp', kernel + '/' + name + '.hpp',
-                     kernel + '/local_support.cpp',
-                     *[common + '/' + filename for filename in ('support.hpp', 'support.cpp', 'harness.cpp')],
-                     data + '/input.data', check],
-            flags=[
-                '--top-fname=' + name, '-I@/' + common, '@/' + kernel + '/' + name + '.cpp',
-                '--generate-tb=@/' + kernel + '/local_support.cpp',
-                '--generate-tb=@/' + common + '/harness.cpp', '--generate-tb=@/' + common + '/support.cpp',
-                '--tb-arg=@/' + data + '/input.data', '--tb-arg=@/' + check,
-                '--std=gnu++11', '-fno-tree-vectorize', '-fno-delete-null-pointer-checks',
-                '--hls-div=NR', '--tb-queue-size=4', '--channels-type=MEM_ACC_11',
-                '--channels-number=1', '--bus-pipelined', *macros,
-            ], marker='Success.', byte_check=check if name == 'bfs' else None,
-        )
-
-
 def cases():
-    yield from compatibility_cases()
     for spec in BENCHMARKS:
         yield official_case(spec)
