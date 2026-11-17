@@ -29,7 +29,7 @@ configuration. Run a suite directly or use `run_tests.sh` to execute several sui
 | `openmp/` | Functional kernels and the original test list |
 | `gapbs/` | Graph test list and pinned `sources/` submodule |
 | `polybench/` | Eight checked-in kernels with conditional AXI pragmas, headers, testbenches and utilities |
-| `machsuite/` | SpMV and BFS benchmarks |
+| `machsuite/` | 19 official workloads from a pinned source submodule, with generated AXI/MDPI adapters |
 | `results/` | Manually approved versioned golden data and collection/comparison scripts |
 | `tools/` | Environment checks, input staging, local execution and golden comparison |
 
@@ -56,7 +56,7 @@ tools include Make, Git, Bash, Awk, `bc`, `envsubst`, `timeout` and the Binutils
 utilities `objcopy` and `readelf`. The runtime library check uses `ldd`.
 
 ```sh
-git clone --recursive https://github.com/gggg100/ramulator-examples.git
+git clone --recursive https://github.com/ferrandi/ramulator-examples.git
 cd ramulator-examples
 cp env.example.sh env.sh
 # Configure BAMBU_HLS and RAMULATOR2_DIR, then:
@@ -69,7 +69,12 @@ source env.sh
 ./machsuite/run.sh --tag machsuite
 ```
 
-GAPBS retains its pinned `sources/` submodule.
+GAPBS and MachSuite use pinned `sources/` submodules. For an existing checkout:
+
+```sh
+git submodule update --init --recursive gapbs/sources machsuite/sources
+```
+
 PolyBench includes its sources and conditional AXI pragmas.
 `RAMULATOR2_DIR` points to the prefix containing
 `include/ramulator/` and `lib/libramulator.so` (or `lib64/`).
@@ -106,6 +111,12 @@ cases retain their names `polybench_gemm` and `polybench_atax`.
 ./polybench/run.sh --case polybench_trisolv_axi_tb_1ch
 ./polybench/run.sh --case polybench_gemm_native_2ch
 ```
+
+MachSuite includes all 19 official workloads. Its launcher generates the AXI
+kernels and MDPI support from the pinned sources before execution. Use
+`./machsuite/run.sh --list` to list cases and `--tests 'machsuite_spmv_*'` to
+select a family. The [suite README](machsuite/README.md) describes preparation,
+functional checks and the dedicated backprop reference.
 
 GAPBS keeps the original undirected graph. Its incoming-graph argument positions
 are retained for compatibility; the loader only reads the outgoing graph files.
