@@ -28,7 +28,7 @@ configuration. Run a suite directly or use `run_tests.sh` to execute several sui
 | `micro/` | Memory access patterns and reference checker |
 | `openmp/` | Functional kernels and the original test list |
 | `gapbs/` | Graph test list and pinned `sources/` submodule |
-| `polybench/` | Eight checked-in kernels with conditional AXI pragmas, headers, testbenches and utilities |
+| `polybench/` | Eight kernels from a pinned source submodule, with generated kernel/testbench adapters |
 | `machsuite/` | 19 official workloads from a pinned source submodule, with generated AXI/MDPI adapters |
 | `results/` | Manually approved versioned golden data and collection/comparison scripts |
 | `tools/` | Environment checks, input staging, local execution and golden comparison |
@@ -69,13 +69,14 @@ source env.sh
 ./machsuite/run.sh --tag machsuite
 ```
 
-GAPBS and MachSuite use pinned `sources/` submodules. For an existing checkout:
+GAPBS, PolyBench and MachSuite use pinned `sources/` submodules. For an existing checkout:
 
 ```sh
-git submodule update --init --recursive gapbs/sources machsuite/sources
+git submodule update --init --recursive gapbs/sources polybench/sources machsuite/sources
 ```
 
-PolyBench includes its sources and conditional AXI pragmas.
+PolyBench and MachSuite generate their adapters automatically before execution.
+The `smoke`, `micro` and `openmp` suites keep their local test sources.
 `RAMULATOR2_DIR` points to the prefix containing
 `include/ramulator/` and `lib/libramulator.so` (or `lib64/`).
 
@@ -102,7 +103,7 @@ then the selected board's default. For example:
 CLOCK_PERIOD_NS=10 ./smoke/run.sh --case smoke_axi_1ch
 ```
 
-PolyBench includes all eight original kernels in three profiles:
+PolyBench runs eight selected original kernels in three profiles:
 `native` (shared minimal bus, 1/2/4 channels), `axi` (1/2/4 channels) and `axi_tb` (one channel,
 with the utility compiled as part of the testbench). The two originally recorded
 cases retain their names `polybench_gemm` and `polybench_atax`.

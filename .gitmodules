@@ -4,3 +4,6 @@
 [submodule "machsuite/sources"]
 	path = machsuite/sources
 	url = https://github.com/breagen/MachSuite.git
+[submodule "polybench/sources"]
+	path = polybench/sources
+	url = https://github.com/ferrandi/PolyBenchC.git
