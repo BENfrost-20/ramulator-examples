@@ -25,6 +25,19 @@ def tcl_quote(value):
     return '{'+s+'}'
 
 
+def control_tasks(text):
+    """Extract the two owned AXI-Lite tasks, preserving their lifetime qualifier."""
+    blocks=[]
+    for name in ('wr','rd'):
+        pattern=(r'^[ \t]*task[ \t]+(?:automatic[ \t]+)?'+name+
+                 r'[ \t]*\(.*?^[ \t]*endtask\b[^\n]*')
+        matches=re.findall(pattern,text,flags=re.M|re.S)
+        if len(matches)!=1:
+            raise ValueError('Expected exactly one owned control task '+name+'; inspect control_tb.sv')
+        blocks.append(matches[0])
+    return '\n\n'.join(blocks)
+
+
 def validate(info,c):
     if info['case']!='memory_probe_single' or info['axi_ports']!=['m_axi_0']:
         raise ValueError('Concrete vendor slice implements memory_probe_single only; no case substitution')
@@ -179,8 +192,7 @@ def emit_tb(out,c,ns,repetitions,core_id_width=1):
                   f'if(owner_core&&x_bvalid&&|x_bid[{c["native_id_width"]-1}:{core_id_width}])$fatal(1,"Unexpected upper BID bits");']
     lines += ['if((k_arvalid&&(k_arregion||k_aruser))||(k_awvalid&&(k_awregion||k_awuser))||(k_wvalid&&k_wuser))$fatal(1,"Unsupported nonzero AXI user/region semantics");','end']
     # Reuse only the owned AXI-Lite test tasks; no reference script is executed.
-    tasks=(ROOT/'fpga/tests/control_tb.sv').read_text()
-    tasks=tasks[tasks.index('task wr('):tasks.index('reg [31:0] value;integer rep;reg [63:0] snap;')]
+    tasks=control_tasks((ROOT/'fpga/tests/control_tb.sv').read_text())
     lines += [re.sub(r'\bclk\b','kernel_clk',tasks)]
     lines += [r'''
 task mem_write(input [63:0] address,input [31:0] value);

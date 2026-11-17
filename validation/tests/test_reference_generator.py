@@ -3,7 +3,7 @@ from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
-from validation.build_reference import validate,emit_tb,emit_tcl
+from validation.build_reference import validate,emit_tb,emit_tcl,control_tasks
 
 ROOT=Path(__file__).resolve().parents[2]
 
@@ -14,6 +14,21 @@ class ReferenceGeneratorTests(unittest.TestCase):
         c['initialization']['evidence']='Synthetic test profile; not a qualified installed model'
         return c
     def info(self):return {'case':'memory_probe_single','axi_ports':['m_axi_0']}
+    def test_control_tasks_accept_static_and_automatic_declarations(self):
+        for qualifier in ('','automatic '):
+            with self.subTest(qualifier=qualifier):
+                wr='task '+qualifier+'wr(input [7:0] address);\n @(posedge clk);\nendtask'
+                rd='task '+qualifier+'rd(input [7:0] address,output [31:0] value);\n value=0;\nendtask'
+                text='module control_tb;\n'+wr+'\n\n'+rd+'\nreg [31:0] unrelated;\nendmodule\n'
+                extracted=control_tasks(text)
+                self.assertEqual(extracted,wr+'\n\n'+rd)
+                self.assertNotIn('unrelated',extracted)
+    def test_missing_and_duplicate_control_tasks_fail_explicitly(self):
+        wr='task automatic wr(input [7:0] address);\nendtask'
+        rd='task automatic rd(input [7:0] address);\nendtask'
+        for text in (wr,rd,wr+'\n'+wr+'\n'+rd):
+            with self.assertRaisesRegex(ValueError,'exactly one owned control task'):
+                control_tasks(text)
     def test_missing_clocks_or_wrong_case_rejected(self):
         c=self.model();c['memory_mhz']=0
         with self.assertRaisesRegex(ValueError,'memory_mhz'):validate(self.info(),c)
