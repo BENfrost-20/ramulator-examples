@@ -30,7 +30,7 @@ always @(posedge clk) begin
 end
 initial begin #1000000;$fatal(1,"Watchdog");end
 
-task wr(input [7:0] address,input [31:0] value,input [3:0] strobe=15,input bit reverse=0,input [1:0] expect_resp=0);
+task automatic wr(input [7:0] address,input [31:0] value,input [3:0] strobe=15,input bit reverse=0,input [1:0] expect_resp=0);
  fork
   begin repeat(reverse?3:0)@(negedge clk);@(negedge clk);s_axi_control_awaddr=address;s_axi_control_awvalid=1;
    do @(posedge clk);while(!s_axi_control_awready);@(negedge clk);s_axi_control_awvalid=0;end
@@ -42,7 +42,7 @@ task wr(input [7:0] address,input [31:0] value,input [3:0] strobe=15,input bit r
  s_axi_control_bready=1;@(posedge clk);@(negedge clk);s_axi_control_bready=0;
 endtask
 
-task rd(input [7:0] address,output [31:0] value);
+task automatic rd(input [7:0] address,output [31:0] value);
  @(negedge clk);s_axi_control_araddr=address;s_axi_control_arvalid=1;
  do @(posedge clk);while(!s_axi_control_arready);
  @(negedge clk);s_axi_control_arvalid=0;

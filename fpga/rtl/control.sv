@@ -1,3 +1,4 @@
+`timescale 1ns/1ps
 // User-managed AXI-Lite, independent AW/W, coherent completion snapshots.
 module fpga_control #(parameter BANKS=1)(
  input wire clk, resetn,
