@@ -78,7 +78,12 @@ def verify(text, info):
     expected={'clock':('input',1),'reset':('input',1),'start_port':('input',1),
               'done_port':('output',1),'idle_port':('output',1)}
     for name in info['pointers']:
-        expected[name]=('input',32)
+        width=p.get(name,('',0))[1]
+        if width not in (32,64):
+            raise ValueError('Only 32/64-bit pointer inputs supported')
+        if width==64 and not (info['top']=='memory_probe' and info['banks']==1):
+            raise ValueError('64-bit pointers require the single-probe adapter')
+        expected[name]=('input',width)
     if info['top'] in ('memory_probe','vector_add'): expected['n']=('input',32)
     prefixes=sorted(n[:-7] for n in p if n.endswith('_araddr'))
     if not prefixes: raise ValueError('No supported AXI master; native/minimal bridge not implemented')
@@ -89,9 +94,18 @@ def verify(text, info):
                 if width not in (1,2): raise ValueError('Only inspected one/two-bit AXI IDs supported')
             if suffix in ('araddr','awaddr'):
                 width=p.get(prefix+'_'+suffix,('',0))[1]
-                if width not in (31,32): raise ValueError('Only reviewed 31/32-bit logical addresses supported')
+                if width not in (31,32,64): raise ValueError('Only 31/32/64-bit logical addresses supported')
             expected[prefix+'_'+suffix]=(direction,width)
         if prefix in p: expected[prefix]=('output',1)  # Bambu dummy marker
+    wide=p.get('data')==('input',64) or any(
+        p.get(prefix+'_'+suffix,('',0))[1]==64
+        for prefix in prefixes for suffix in ('araddr','awaddr'))
+    if wide and not (
+        info['top']=='memory_probe' and info['banks']==1
+        and prefixes==['m_axi_0'] and p.get('data')==('input',64)
+        and all(p.get('m_axi_0_'+suffix)==('output',64)
+                for suffix in ('araddr','awaddr'))):
+        raise ValueError('64-bit addresses require matching single-probe pointer and AXI widths')
     if p!=expected:
         diff={n:(p.get(n),expected.get(n)) for n in p.keys()|expected.keys() if p.get(n)!=expected.get(n)}
         raise ValueError('Generated interface differs from supported contract; no architecture substitution: '+str(diff))
@@ -106,22 +120,32 @@ def bounded_log2(text):
     start=text.index('module MinimalAXI4Adapter(')
     end=text.index('endmodule',start)
     body=text[start:end]
-    pattern=r'  `ifndef _SIM_HAVE_CLOG2\s+function integer log2;.*?  endgenerate'
-    replacement='''  // Fixed bound for ceil(log2(bytes)), valid transfer sizes 1..4.
-  function integer fpga_size_log2;
+    old='''  function integer log2;
     input integer value;
-    integer v,j;
+    integer temp_value;
     begin
-      v=value-1;fpga_size_log2=0;
-      for(j=0;j<32;j=j+1) begin
-        if(v>0) begin v=v>>1;fpga_size_log2=fpga_size_log2+1;end
+      temp_value = value - 1;
+      for(log2 = 0; temp_value > 0; log2 = log2 + 1)
+        temp_value = temp_value >> 1;
+    end
+  endfunction'''
+    replacement='''  function integer log2;
+    input integer value;
+    integer temp_value, j;
+    begin
+      temp_value = value - 1;
+      log2 = 0;
+      for(j = 0; j < 32; j = j + 1) begin
+        if(temp_value > 0) begin
+          temp_value = temp_value >> 1;
+          log2 = log2 + 1;
+        end
       end
     end
-  endfunction
-  wire [2:0] size_next;
-  assign size_next=fpga_size_log2(Mout_data_ram_size >> 3);'''
-    body,count=re.subn(pattern,replacement,body,flags=re.S)
-    if count!=1: raise ValueError('Adapter log2 layout changed; inspect before transforming')
+  endfunction'''
+    if body.count(old)!=1: raise ValueError('Adapter log2 layout changed; inspect before transforming')
+    # Preserve BYTE_OFFSET_BITS, conditional compilation and surrounding logic.
+    body=body.replace(old,replacement,1)
     return text[:start]+body+text[end:]
 
 
@@ -187,7 +211,7 @@ def render_wrapper(info,p,prefixes):
                 '.busy()','.core_done()','.drain_done()','.core_cycles()','.drain_cycles()']
     lines+= [f"fpga_control #(.BANKS({len(prefixes)})) control("+', '.join(control)+');']
     connects=['.clock(ap_clk)','.reset(ap_rst_n)','.start_port(start_core)','.done_port(done_core)','.idle_port()']
-    connects += [f'.{name}(32\'h{value:08x})' for name,value in info['pointers'].items()]
+    connects += [f".{name}({p[name][1]}'h{value:x})" for name,value in info['pointers'].items()]
     if 'n' in p: connects.append('.n(n)')
     for i,prefix in enumerate(prefixes):
         bank=i  # independent base register per AXI interface; shared-BO aliasing is configured by host
@@ -196,8 +220,10 @@ def render_wrapper(info,p,prefixes):
             name=prefix+'_'+suffix
             if suffix in ('araddr','awaddr'):
                 width=p[name][1]
+                raw=f'raw_{name}'
+                extended=raw if width==64 else f"{{{{{64-width}{{1'b0}}}},{raw}}}"
                 lines += [f'wire [{width-1}:0] raw_{name};',
-                          f"assign {name}=bases[{bank*64}+:64]+({{{{{64-width}{{1'b0}}}},raw_{name}}}-64'h{logical:016x});"]
+                          f"assign {name}=bases[{bank*64}+:64]+({extended}-64'h{logical:016x});"]
                 connects.append(f'.{name}(raw_{name})')
             else: connects.append(f'.{name}({name})')
         if prefix in p: connects.append(f'.{prefix}()')

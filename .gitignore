@@ -28,6 +28,7 @@ obj_dir/
 # Experimental FPGA builds/results, separate from golden pipeline.
 /.fpga/
 /fpga/local.json
+/fpga/build.env.sh
 *.jou
 *.xclbin
 *.xo

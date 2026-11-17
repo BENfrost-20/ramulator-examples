@@ -1,3 +1,4 @@
+`timescale 1ns/1ps
 // AXI boundary completion, independently of the computational core's done.
 // AXI4 W data is ordered, but may precede AW. Track an accepted partial W
 // burst as well as completed W bursts; WLAST counts alone are insufficient.

@@ -42,7 +42,8 @@
   "policy": "Ferrandi source and matching binary required; no Jesun fallback",
   "hardware_accepted_revisions": [
     "d1975e817a77ac3fe046ccb3adb471e05224ec81",
-    "cda4db2e724df357f749c0c41b12bdc065462ced"
+    "cda4db2e724df357f749c0c41b12bdc065462ced",
+    "622610fd517e38cd1fb7a47f1dfc3314314a1778"
   ],
   "selection_evidence": {
     "branch_audit": "feature/ramulator contains CI, MDPI backend, production RTL regressions and a pinned ferrandi/ramulator2 submodule; main is independently usable for hardware synthesis",
