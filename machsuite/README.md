@@ -75,6 +75,11 @@ updating MachSuite.
 
 ## Functional checks
 
+Like Bambu's classic MachSuite runner, the recipes use
+`-DBAMBU_SKIP_VERIFICATION`: correctness is checked against `check.data` by
+the benchmark checker rather than the automatic MDPI comparison with native C.
+The floating-point checkers retain the official absolute tolerance of `1e-6`.
+
 The support code retains the official input parsing and reference comparison.
 It additionally rejects non-finite floating outputs, checks sorted arrays exactly
 and validates BFS vertex distances with an independent host traversal. Stencil
