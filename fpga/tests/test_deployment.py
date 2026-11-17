@@ -27,13 +27,26 @@ def fixture(banked=False):
 
 class DeploymentTests(unittest.TestCase):
     def test_registry_preserves_recipe(self):
-        cases=registry();self.assertEqual(len(cases),145)
+        cases=registry();self.assertEqual(len(cases),143)
         flags=cases['t06_byte_lanes']['flags']
         self.assertIn('-DPATTERN=6',flags);self.assertIn('--compiler=I386_CLANG13',flags)
         self.assertIn('--bus-pipelined',flags)
         self.assertEqual(cases['smoke_axi_1ch']['clock_period_ns'],10)
         self.assertEqual(len(select()),2)
         self.assertEqual(len(select(all_supported=True)),8)
+    def test_imported_upstream_factories_preserve_case_names_and_flags(self):
+        import importlib
+        registered = registry()
+        for suite in ('polybench', 'machsuite'):
+            recipes = importlib.import_module(suite + '.cases')
+            expected = list(recipes.cases())
+            actual = {name for name, case in registered.items() if case['suite'] == suite}
+            self.assertEqual(actual, {case['name'] for case in expected})
+            for case in expected:
+                with self.subTest(suite=suite, case=case['name']):
+                    self.assertEqual(registered[case['name']]['flags'],
+                                     [*recipes.COMMON_FLAGS, *case['flags']])
+
     def test_selection_never_substitutes(self):
         with self.assertRaisesRegex(ValueError,'not yet implemented'): select(['t10_*'])
         with self.assertRaisesRegex(ValueError,'No registered case'): select(['typo'])

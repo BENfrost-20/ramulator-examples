@@ -19,7 +19,7 @@ def registry():
         nodes = [node for node in tree.body if isinstance(node, (ast.FunctionDef, ast.Assign))
                  and not (isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == 'suite_dir' for t in node.targets))]
         imports = [node for node in tree.body if isinstance(node, ast.ImportFrom)
-                   and node.module in ('tools.source_list', 'machsuite.cases')]
+                   and node.module in ('tools.source_list', 'machsuite.cases', 'polybench.cases')]
         namespace = {}
         exec(compile(ast.Module(body=imports + nodes, type_ignores=[]), str(path), 'exec'), namespace)
         calls = [n for n in ast.walk(tree) if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == 'run_suite']
