@@ -6,7 +6,7 @@ SUITE = Path(__file__).resolve().parent
 COMMON_FLAGS = [
     '--simulate', '--simulator=VERILATOR', '--compiler=I386_CLANG13', '-m64',
     '--memory-allocation-policy=NO_BRAM', '--enable-ramulator',
-    '--output-directory=output', '--generate-interface=INFER',
+    '--output-directory=output', '-v3', '--generate-interface=INFER',
     '-DBAMBU_SKIP_VERIFICATION',
 ]
 
