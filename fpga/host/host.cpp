@@ -88,7 +88,7 @@ int main(int argc,char** argv) {
     if(buffers[b].size()+2*abi::GUARD>slab_bytes) throw std::runtime_error("Buffer exceeds guarded allocation");
     Bytes contents(slab_bytes,0xa5);
     std::copy(buffers[b].begin(),buffers[b].end(),contents.begin()+abi::GUARD);
-    bos[b]->write(contents.data(),contents.size());bos[b]->sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    bos[b]->write(contents.data(),contents.size(),0);bos[b]->sync(XCL_BO_SYNC_BO_TO_DEVICE);
    }
    auto input_dma_seconds=std::chrono::duration<double>(std::chrono::steady_clock::now()-input_begin).count();
    auto previous=ip.read_register(abi::GENERATION);
@@ -114,7 +114,7 @@ int main(int argc,char** argv) {
    auto core=read64(abi::CORE_CYCLES),drain=read64(abi::DRAIN_CYCLES);
    if(status&abi::ERROR) throw std::runtime_error("AXI response error");
    for(unsigned b=0;b<case_banks;++b) {
-    bos[b]->sync(XCL_BO_SYNC_BO_FROM_DEVICE);Bytes got(slab_bytes);bos[b]->read(got.data(),got.size());
+    bos[b]->sync(XCL_BO_SYNC_BO_FROM_DEVICE);Bytes got(slab_bytes);bos[b]->read(got.data(),got.size(),0);
     for(std::size_t i=0;i<got.size();++i) {
      auto want=(i>=abi::GUARD && i<abi::GUARD+expected_banks[b].size())?expected_banks[b][i-abi::GUARD]:0xa5;
      if(got[i]!=want) throw std::runtime_error("Oracle/guard mismatch bank "+std::to_string(b)+" byte "+std::to_string(i));

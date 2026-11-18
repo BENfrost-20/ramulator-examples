@@ -1,6 +1,7 @@
 """Focused deployment commands; nothing programs a board automatically."""
 import argparse
 from collections import Counter
+import fcntl
 import hashlib
 import json
 import math
@@ -13,10 +14,13 @@ import subprocess
 import sys
 import tempfile
 import time
+import xml.etree.ElementTree as ET
+from zipfile import BadZipFile, ZipFile
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
 from fpga.catalog import registry, select, SMALL
+from fpga.deploy import checked_digest, export_bundle
 from fpga.provenance import verify_bambu
 from fpga.prepare import ABI, digest, layout, make_abi_header, prepare
 from fpga.hostgen import write as hostgen
@@ -90,12 +94,23 @@ def preflight(args):
     write(args.output,data);print(json.dumps(data,indent=2));return bool(errors)
 
 
-def run(argv,cwd,log):
-    print('$ '+shlex.join(map(str,argv)),flush=True)
-    with Path(log).open('w') as f:
-        f.write('$ '+shlex.join(map(str,argv))+'\n');f.flush()
-        p=subprocess.run(list(map(str,argv)),cwd=cwd,stdout=f,stderr=subprocess.STDOUT)
-    if p.returncode: raise ValueError(f'Command exited {p.returncode}; see {log}')
+def run(argv, cwd, log):
+    command = shlex.join(list(map(str, argv)))
+    print('$ ' + command, flush=True)
+    started = time.monotonic()
+    with Path(log).open('w') as handle:
+        handle.write('$ ' + command + '\n')
+        handle.flush()
+        try:
+            result = subprocess.run(list(map(str, argv)), cwd=cwd, stdout=handle,
+                                    stderr=subprocess.STDOUT)
+        finally:
+            seconds = round(time.monotonic() - started, 3)
+            handle.write(f'\nWall time: {seconds:.3f} s\n')
+    print(f'Wall time: {seconds:.3f} s ({log})', flush=True)
+    if result.returncode:
+        raise ValueError(f'Command exited {result.returncode}; see {log}')
+    return seconds
 
 
 def generate(case,args):
@@ -107,6 +122,7 @@ def generate(case,args):
     if case['suite']=='calibration':
         source=ROOT/'fpga/calibration/memory_probe.c'
         shutil.copyfile(source,snapshot/source.name)
+        source_hashes = {case['members'][0]: digest(snapshot/source.name)}
         flags=[f.replace('@/fpga/calibration/memory_probe.c',str(snapshot/source.name)) for f in case['flags']]
         argv=[tool('bambu'),*flags,f"--device-name={b['bambu_device']}",f'--clock-period={period}',f'--output-directory={out}/hls']
     else:
@@ -117,14 +133,15 @@ def generate(case,args):
         for member in case['members']:
             target=inputs/member;target.parent.mkdir(parents=True,exist_ok=True)
             shutil.copyfile(ROOT/member,target)
+        source_hashes = {member: digest(inputs/member) for member in case['members']}
         flags=[f.replace('@/',str(inputs)+'/') for f in case['flags']]
         flags=[f for f in flags if f not in ('--simulate','--enable-ramulator') and not f.startswith(('--simulator=','--generate-tb=','--tb-','--output-directory='))]
         argv=[tool('bambu'),f"--device-name={b['bambu_device']}",f'--clock-period={period}',*flags,f'--output-directory={out}/hls']
     identity=capture([tool('bambu'),'--version'])
     if identity['exit_code']: raise ValueError('Bambu version check failed; see '+str(out))
     write(out/'generation.json',{'case':case['name'],'board':args.board,'period_ns':period,'argv':argv,'compiler':'I386_CLANG13',
-                               'bambu':identity,'provenance':provenance,'source_sha256':{m:digest(ROOT/m) for m in case['members']},'git_base':capture(['git','-C',str(ROOT),'rev-parse','HEAD'])})
-    run(argv,out,out/'bambu.log')
+                               'bambu':identity,'provenance':provenance,'source_sha256':source_hashes,'git_base':capture(['git','-C',str(ROOT),'rev-parse','HEAD'])})
+    seconds = run(argv, out, out / 'bambu.log')
     top=layout(case)['top']
     candidates=list((out/'hls').rglob(top+'.v'))
     if len(candidates)!=1: raise ValueError('Expected one generated '+top+'.v; inspect '+str(out/'hls'))
@@ -132,6 +149,7 @@ def generate(case,args):
     gen=json.loads((out/'generation.json').read_text())
     gen['rtl_sha256']={name:digest(rtl_dir/name) for name in (top+'.v','panda_libtech.v')}
     gen['rtl_dir']=str(rtl_dir)
+    gen['wall_seconds'] = seconds
     write(out/'generation.json',gen)
     print('Generated; prepare --rtl-dir '+str(rtl_dir)+' --generation '+str(out/'generation.json'))
 
@@ -168,16 +186,129 @@ int main(){for(unsigned rep=0;rep<2;++rep){
     print((out/'native.log').read_text())
 
 
+def kernel_metadata(xo, expected_ports):
+    with ZipFile(xo) as archive:
+        names = [name for name in archive.namelist() if Path(name).name == 'kernel.xml']
+        if len(names) != 1:
+            raise ValueError('XO must contain exactly one kernel.xml')
+        root = ET.fromstring(archive.read(names[0]))
+        kernel = root if root.tag == 'kernel' else root.find('kernel')
+    if kernel is None or kernel.get('name') != 'fpga_kernel':
+        raise ValueError('XO must describe the fpga_kernel RTL kernel')
+    if kernel.get('hwControlProtocol') != 'user_managed':
+        raise ValueError('XO requires user_managed control')
+    ports = {item.get('name'): item.get('mode') for item in kernel.findall('ports/port')}
+    masters = {name for name, mode in ports.items() if mode == 'master'}
+    if ports.get('S_AXI_CONTROL') != 'slave' or masters != set(expected_ports):
+        raise ValueError('XO AXI interfaces differ from the prepared kernel')
+    if any(arg.get('port') not in ports for arg in kernel.findall('args/arg')):
+        raise ValueError('XO kernel.xml contains an argument with an unknown AXI port')
+
+
+def memory_mapping(info, resources, overrides):
+    ports = info['axi_ports']
+    groups = info['base_register_banks']
+    banks = {group: resources[group] for group in set(groups)}
+    selected = {}
+    for override in overrides:
+        port, _, resource = override.partition('=')
+        if port not in ports or resource not in resources:
+            raise ValueError(f'Expected a prepared port and verified resource: {override}')
+        group = groups[ports.index(port)]
+        if group in selected and selected[group] != resource:
+            raise ValueError('Aliased AXI ports must use the same memory resource')
+        selected[group] = resource
+    banks.update(selected)
+    if len(set(banks.values())) != len(banks):
+        raise ValueError('Separate memory banks require distinct resources')
+    return {port: banks[group] for port, group in zip(ports, groups)}
+
+
+def package(prepared, info, part, period):
+    seconds = run([tool('vivado'), '-mode', 'batch', '-source',
+                   ROOT / 'fpga/tcl/package.tcl', '-tclargs', prepared, part, period],
+                  prepared, prepared / 'package.log')
+    xo = prepared / 'fpga_kernel.xo'
+    kernel_metadata(xo, info['axi_ports'])
+    write(prepared / 'package.json', {
+        'manifest_sha256': digest(prepared / 'manifest.json'),
+        'xo_sha256': digest(xo),
+        'wall_seconds': seconds,
+    })
+
+
+def link(prepared, dest, info, args, platform_path, platform_receipt, resources):
+    xo = prepared / 'fpga_kernel.xo'
+    source_hash = digest(prepared / 'manifest.json')
+    abi_path = prepared / 'abi.hpp'
+    abi_hash = checked_digest(abi_path, info['abi_sha256']) if 'abi_sha256' in info else digest(abi_path)
+    xo_hash = digest(xo)
+    package_path = prepared / 'package.json'
+    package_receipt = json.loads(package_path.read_text()) if package_path.is_file() else {}
+    if package_receipt and (package_receipt['manifest_sha256'] != source_hash or
+                            package_receipt['xo_sha256'] != xo_hash):
+        raise ValueError('Packaged XO differs from its receipt; run package again')
+
+    mapping = memory_mapping(info, resources, args.memory)
+    dest.mkdir(parents=True, exist_ok=False)
+    linked_xo = dest / xo.name
+    shutil.copyfile(xo, linked_xo)
+    checked_digest(linked_xo, xo_hash)
+    kernel_metadata(linked_xo, info['axi_ports'])
+    cfg = dest / 'connectivity.cfg'
+    cfg.write_text('[connectivity]\nnk=fpga_kernel:1:fpga_kernel_1\n' +
+                   ''.join(f'sp=fpga_kernel_1.{port}:{resource}\n'
+                           for port, resource in mapping.items()))
+    xclbin = dest / 'fpga_kernel.xclbin'
+    seconds = run([tool('v++'), '--link', '--target', args.target, '--platform', platform_path,
+                   '--config', cfg, '--kernel_frequency', str(1000 / info['generation']['period_ns']),
+                   '--save-temps', '--temp_dir', dest / 'temp', '--log_dir', dest / 'logs',
+                   '--report_dir', dest / 'reports', '-o', xclbin, linked_xo],
+                  dest, dest / 'link.log')
+    if not xclbin.is_file() or not xclbin.stat().st_size:
+        raise ValueError('Link returned without a nonempty xclbin')
+    times = {'generate': info['generation'].get('wall_seconds'),
+             'prepare': info.get('wall_seconds'), 'package': package_receipt.get('wall_seconds'),
+             'link': seconds}
+    if args.target == 'hw_emu':
+        times['emconfig'] = run(['emconfigutil', '--platform', platform_path, '--od', dest],
+                                 dest, dest / 'emconfig.log')
+    write(dest / 'build.json', {
+        'target': args.target, 'platform': platform_receipt, 'memory': mapping,
+        'manifest_sha256': source_hash, 'abi_sha256': abi_hash,
+        'xo_sha256': xo_hash, 'xclbin_sha256': digest(xclbin),
+        'wall_seconds': times,
+        'implementation_timing': 'Inspect routed timing and DRC reports before deployment.',
+    })
+
+
 def main():
     ap=argparse.ArgumentParser(description=__doc__)
-    ap.add_argument('command',choices=['inventory','preflight','generate','prepare','package','link','host','native'])
+    ap.add_argument('command',choices=['inventory','preflight','generate','prepare','package','link','bundle','host','native'])
     ap.add_argument('--board',default='xcu55c');ap.add_argument('--tests',action='append',default=[])
     ap.add_argument('--all-supported',action='store_true');ap.add_argument('--output')
     ap.add_argument('--rtl-dir');ap.add_argument('--prepared');ap.add_argument('--generation')
     ap.add_argument('--fix-adapter-log2',action='store_true');ap.add_argument('--period',default='10')
     ap.add_argument('--target',choices=['hw','hw_emu'],default='hw_emu')
+    ap.add_argument('--link-dir', type=Path, help='New link directory, or completed directory for bundle')
+    ap.add_argument('--memory', action='append', default=[], metavar='PORT=RESOURCE',
+                    help='Remap a prepared port during link; repeat for additional groups')
+    ap.add_argument('--bundle', type=Path, metavar='ARCHIVE',
+                    help='Export a .tar.gz after a successful hardware link')
     args=ap.parse_args()
-    args.output=args.output or (".fpga/"+args.command+".json" if args.command in ("inventory","preflight") else ".fpga/build")
+    if args.bundle and (args.command != 'link' or args.target != 'hw'):
+        ap.error('--bundle requires link --target hw')
+    if args.bundle:
+        if args.bundle.exists() or args.bundle.is_symlink():
+            ap.error(f'Bundle already exists: {args.bundle}')
+        if not shutil.which(tool('xclbinutil')):
+            ap.error('Set FPGA_XCLBINUTIL or add xclbinutil to PATH for export')
+    if args.memory and args.command != 'link':
+        ap.error('--memory is only valid for link')
+    if args.link_dir and args.command not in ('link', 'bundle'):
+        ap.error('--link-dir is only valid for link or bundle')
+    if args.command != 'bundle':
+        args.output=args.output or (".fpga/"+args.command+".json" if args.command in ("inventory","preflight") else ".fpga/build")
     if args.command=='inventory':
         matrix={'boards':load_board_profiles(),'cases':[{ 'name':c['name'],'suite':c['suite'],
                   'implementation':'adapter implemented, generated interface verification required' if c['name'] in SMALL else 'not yet implemented',
@@ -189,6 +320,7 @@ def main():
         for case in cases: (generate if args.command=='generate' else native)(case,args)
         return 0
     if args.command=='prepare':
+        started = time.monotonic()
         if len(cases)!=1 or not args.rtl_dir: raise ValueError('prepare requires one exact --tests case and --rtl-dir containing TOP.v + panda_libtech.v')
         out=Path(args.output).resolve();info=prepare(cases[0],args.rtl_dir,out,args.fix_adapter_log2)
         if args.generation:
@@ -198,36 +330,47 @@ def main():
             if info['frontend']!=gen['compiler']: raise ValueError('Generated frontend differs from generation receipt')
             info['generation']=gen
         else: info['reference_only']=True
-        write(out/'manifest.json',info);registers(info,out);hostgen(cases[0],info,out)
+        registers(info,out)
+        info['host_sha256'] = hostgen(cases[0], info, out)
+        info['abi_sha256'] = digest(out / 'abi.hpp')
+        info['wall_seconds'] = round(time.monotonic() - started, 3)
+        write(out/'manifest.json',info)
         print('Prepared '+str(out));return 0
     if not args.prepared: raise ValueError('--prepared required')
-    out=Path(args.prepared).resolve();info=json.loads((out/'manifest.json').read_text())
-    if args.command=='host':
-        xrt=Path(os.environ.get('XILINX_XRT','/opt/xilinx/xrt'))
-        flags=json.loads((out/'host-flags.json').read_text())
-        run([os.environ.get('CXX','g++'),'-std=c++17','-O2','-Wno-unknown-pragmas','-pthread','-I'+str(out),'-I'+str(ROOT/'fpga/host'),'-I'+str(xrt/'include'),*flags,
-             ROOT/'fpga/host/host.cpp','-L'+str(xrt/'lib'),'-Wl,-rpath,'+str(xrt/'lib'),'-lxrt_coreutil','-o',out/'host'],out,out/'host-build.log');return 0
-    if info.get('reference_only'): raise ValueError('Reference RTL has no board-correct generation receipt; regenerate actual selected Bambu DUT first')
-    gen=info['generation'];b,p=board(gen['board']);period=gen['period_ns'];plat,r=receipt(gen['board'],p,period)
-    for name,sha in info['rtl_sha256'].items():
-        if digest(out/'rtl'/name)!=sha: raise ValueError('Prepared RTL changed: '+name)
-    if args.command=='package':
-        run([tool('vivado'),'-mode','batch','-source',ROOT/'fpga/tcl/package.tcl','-tclargs',out,p['part'],period],out,out/'package.log')
-        if not (out/'fpga_kernel.xo').is_file(): raise ValueError('XO missing')
-    else:
-        connections=[]
-        for i,port in enumerate(info['axi_ports']): connections.append(f'sp=fpga_kernel_1.{port}:{p["resources"][i if info["banks"]==2 else 0]}')
-        cfg=out/'connectivity.cfg';cfg.write_text('[connectivity]\nnk=fpga_kernel:1:fpga_kernel_1\n'+'\n'.join(connections)+'\n')
-        dest=out/args.target;dest.mkdir(exist_ok=False)
-        run([tool('v++'),'--link','--target',args.target,'--platform',plat,'--config',cfg,'--kernel_frequency',str(1000/period),
-             '--save-temps','--temp_dir',dest/'temp','--log_dir',dest/'logs','--report_dir',dest/'reports','-o',dest/'fpga_kernel.xclbin',out/'fpga_kernel.xo'],dest,dest/'link.log')
-        if not (dest/'fpga_kernel.xclbin').is_file(): raise ValueError('xclbin missing')
-        write(dest/'build.json',{'target':args.target,'platform':r,'manifest_sha256':digest(out/'manifest.json'),'xclbin_sha256':digest(dest/'fpga_kernel.xclbin'),
-                                 'implementation_timing':'inspect routed DCP with check_implementation.tcl; link completion alone is not timing approval'})
-        if args.target=='hw_emu': run(['emconfigutil','--platform',plat,'--od',dest],dest,dest/'emconfig.log')
+    out = Path(args.prepared).resolve()
+    if args.command == 'bundle':
+        dest = args.link_dir.resolve() if args.link_dir else out / 'hw'
+        archive = Path(args.output).resolve() if args.output else dest / 'hacc-bundle.tar.gz'
+        export_bundle(out, dest, archive, tool('xclbinutil'))
+        return 0
+    info = json.loads((out / 'manifest.json').read_text())
+    if args.command == 'host':
+        run([sys.executable, ROOT / 'fpga/host/build.py', '--prepared', out],
+            out, out / 'host-build.log')
+        return 0
+    if info.get('reference_only'):
+        raise ValueError('Reference RTL has no board-correct generation receipt; regenerate actual selected Bambu DUT first')
+    gen = info['generation']
+    _, profile = board(gen['board'])
+    period = gen['period_ns']
+    platform_path, platform_receipt = receipt(gen['board'], profile, period)
+    with (out / '.build.lock').open('a') as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as error:
+            raise ValueError(f'Package or link already active in {out}') from error
+        for name, expected in info['rtl_sha256'].items():
+            checked_digest(out / 'rtl' / name, expected)
+        if args.command == 'package':
+            package(out, info, profile['part'], period)
+        else:
+            dest = args.link_dir.resolve() if args.link_dir else out / args.target
+            link(out, dest, info, args, platform_path, platform_receipt, profile['resources'])
+            if args.bundle:
+                export_bundle(out, dest, args.bundle.resolve(), tool('xclbinutil'))
     return 0
 
 if __name__=='__main__':
     try: sys.exit(main())
-    except (ValueError,OSError,KeyError,subprocess.SubprocessError) as e:
+    except (ValueError,OSError,KeyError,subprocess.SubprocessError,BadZipFile,ET.ParseError) as e:
         print('ERROR: '+str(e),file=sys.stderr);sys.exit(2)

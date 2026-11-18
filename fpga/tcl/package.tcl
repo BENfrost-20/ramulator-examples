@@ -78,6 +78,8 @@ ipx::create_xgui_files $core
 ipx::update_checksums $core
 ipx::check_integrity -kernel -xrt $core
 ipx::save_core $core
-package_xo -force -xo_path $prepared/fpga_kernel.xo -kernel_name fpga_kernel \
+set xo_attempt $prepared/fpga_kernel-$stamp.xo
+package_xo -xo_path $xo_attempt -kernel_name fpga_kernel \
  -ip_directory $ip_dir -ctrl_protocol user_managed -output_kernel_xml $prepared/kernel.xml
 close_project
+file rename -force $xo_attempt $prepared/fpga_kernel.xo

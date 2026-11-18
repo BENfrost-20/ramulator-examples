@@ -1,5 +1,8 @@
 # Experimental Bambu FPGA deployment (2024.2)
 
+See the [Ferrandi-to-HACC workflow](HACC.md) for site paths, portable hardware
+bundles, stage reuse and the U55C smoke test.
+
 ## Standalone HBM simulation update (17 November 2026)
 
 The source/configuration checkpoint in [hbm_reference/](hbm_reference/README.md)

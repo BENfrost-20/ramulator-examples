@@ -35,3 +35,6 @@ obj_dir/
 *.bit
 *.dcp
 *.wdb
+
+# Site-specific FPGA deployment paths.
+/fpga/deploy.env
