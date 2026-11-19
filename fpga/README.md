@@ -3,6 +3,52 @@
 See the [Ferrandi-to-HACC workflow](HACC.md) for site paths, portable hardware
 bundles, stage reuse and the U55C smoke test.
 
+## Ramulator timing with the deployed wrapper
+
+Use the prepared RTL from the U55C image to run the single-port
+`memory_probe_single` in Verilator. The test uses the same AXI-Lite registers
+and reads the same wrapper counters as the board host. For the first comparison,
+select `n=1`, repetition 0, and the exact YAML from the native Bambu run.
+
+Run on Ferrandi with the existing Verilator, GCC 13, and Ramulator installation.
+Set the paths below for the local environment. Keep the output directory
+separate from the prepared build.
+
+```bash
+cd "$HOME/thesis/ramulator-examples"
+prepared="$PWD/.fpga/bitstream-xfTkobFQ/probe-single"
+probe="$HOME/thesis/probe-n1.OfTlKxx7"
+export RAMULATOR2_DIR="$HOME/thesis/ramulator-ferrandi-20261116-105256/install"
+export FPGA_VERILATOR=/opt/verilator/verilator-5.030/bin/verilator
+export FPGA_VERILATOR_CXX=/usr/bin/g++-13
+out=$(mktemp -d "$PWD/.fpga/probe-ramulator.XXXXXX")
+python3 -B fpga/functional.py --prepared "$prepared" --output "$out" \
+  --ramulator-config "$probe/hbm2_32ch.yaml" --n 1
+cat "$out/ramulator-results.jsonl" "$out/ramulator-axi.jsonl"
+```
+
+- `ramulator-results.jsonl` records the oracle and guard check, kernel and
+  AXI-drain cycles, the input file, and the AXI request counts.
+- `ramulator-axi.jsonl` records AXI handshakes plus the timing model's read
+  acceptance, read callback and write acceptance. `axi_cycle` counts from
+  testbench reset. Compare differences between AXI events within the same run.
+- `ramulator-config.yaml` retains the exact input YAML. `ramulator-run.json`
+  records its hash, the RTL and library hashes, and the write response policy.
+
+The bridge uses the flat YAML's GEM5 frontend and advances Ramulator by
+`MemorySystem.clock_ratio` DRAM ticks per AXI cycle, carrying fractional ticks
+between cycles. The model clock advances from testbench reset. The bridge
+translates the simulated AXI buffer base back to the probe's logical address
+(`0x40000000` for the first word). The testbench keeps the data and byte strobes
+in a local slab, returns reads after the Ramulator callback, and queues an AXI
+B response when Ramulator accepts the write. The drain counter therefore
+measures AXI completion according to the wrapper's ABI. The address mapping,
+latency of the physical U55C shell, and write visibility in HBM are separate
+calibration tasks.
+
+Omit `--ramulator-config` to use the default AXI RAM. Pass `--n 1` there as well
+to run the same isolated input and control sequence.
+
 ## Standalone HBM simulation update (17 November 2026)
 
 The source/configuration checkpoint in [hbm_reference/](hbm_reference/README.md)

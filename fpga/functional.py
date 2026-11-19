@@ -1,12 +1,9 @@
-"""Generate an executable Verilator test of prepared DUT + real control wrapper.
-Functional single-beat 32-bit AXI responder: NO DRAM timing claim.
-"""
+"""Simulate a prepared FPGA kernel and its control wrapper with Verilator."""
 import argparse
 import json
 import os
 from pathlib import Path
 import shutil
-import subprocess
 import sys
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -14,51 +11,38 @@ sys.path.insert(0,str(ROOT))
 from fpga.prepare import digest
 from fpga.run import run
 
-MEMORY=r'''
-struct Port {
- Bytes* bytes;std::uint64_t base;
- bool rv=false,bv=false;unsigned rid=0,bid=0,rd=0,rdue=0,bdue=0;
- bool arp=false;unsigned saved_rid=0;std::uint64_t saved_ra=0;
- struct A{std::uint64_t addr;unsigned id,size;};struct W{unsigned data,strb;};
- std::deque<A> aw;std::deque<W> w;
- void check(std::uint64_t a,unsigned size){if(size>2||a<base||a+(1u<<size)>base+bytes->size())throw std::runtime_error("Out-of-range/narrow AXI address");}
- void ar(std::uint64_t a,unsigned id,unsigned size,unsigned len){check(a,size);if(len)throw std::runtime_error("Functional backend supports single beats only");arp=true;saved_ra=a;saved_rid=id;rdue=cycles+2+(cycles%5);++reads;}
- void write_addr(std::uint64_t a,unsigned id,unsigned size,unsigned len){check(a,size);if(len)throw std::runtime_error("Single beat model: AWLEN must be zero");aw.push_back({a,id,size});++writes;}
- void write_data(unsigned d,unsigned s,bool last){if(!last)throw std::runtime_error("Missing WLAST");w.push_back({d,s});}
- void update(){
-  if(arp && !rv && cycles>=rdue){auto a=(saved_ra-base)&~std::uint64_t(3);rd=0;for(unsigned i=0;i<4;++i)rd|=unsigned((*bytes)[a+i])<<(8*i);rid=saved_rid;rv=true;arp=false;}
-  if(!bv && !aw.empty() && !w.empty() && !bdue){auto a=aw.front();auto v=w.front();aw.pop_front();w.pop_front();auto off=(a.addr-base)&~std::uint64_t(3);for(unsigned i=0;i<4;++i)if(v.strb&(1u<<i))(*bytes)[off+i]=(v.data>>(8*i))&255;bid=a.id;bdue=cycles+3;}
-  if(bdue && cycles>=bdue){bv=true;bdue=0;}
- }
- bool empty()const{return !rv&&!bv&&!arp&&aw.empty()&&w.empty()&&!bdue;}
-};
-'''
 
-def source(info):
+def source(info, size=None):
     prefixes=info['axi_ports'];banks=info['banks']
+    sizes = '{0,1,63,64,65,127,128,129,512,513}' if info['top'] == 'memory_probe' else '{case_n}'
+    repetitions = 2
+    if size is not None:
+        sizes = '{'+str(size)+'}'
+        repetitions = 1
     code=['#include "Vfpga_kernel.h"','#include "verilated.h"','#include "case.hpp"','#include "abi.hpp"',
-          '#include <deque>','#include <fstream>','#include <iostream>',
-          'static std::uint64_t cycles=0,reads=0,writes=0;',MEMORY,
+          '#include "functional_axi.hpp"','#include <iostream>',
+          'static std::uint64_t cycles=0;',
           'Vfpga_kernel dut;std::vector<Bytes> memory(case_banks,Bytes(slab_bytes,0xa5));',
           'std::uint64_t base(unsigned b){return 0x1200000000ULL+(std::uint64_t(b)<<24);}',
           'Port ports[] = {'+','.join('{&memory['+str(i if banks==2 else 0)+'],base('+str(i if banks==2 else 0)+')}' for i in range(len(prefixes)))+'};',
-          'void step(){if(cycles>20000000)throw std::runtime_error("Simulation watchdog");dut.ap_clk=0;']
+          'void step(){if(cycles>20000000)throw std::runtime_error("Simulation watchdog");dut.ap_clk=0;',
+          '#ifdef FPGA_WITH_RAMULATOR','if(cycles) timing->advance_cycle();','#endif']
     for i,p in enumerate(prefixes):
-        code += [f'''ports[{i}].update();
- dut.{p}_arready=!ports[{i}].arp&&!ports[{i}].rv&&(cycles%3!=0);
- dut.{p}_awready=ports[{i}].aw.size()<4&&(cycles%5!=0);
- dut.{p}_wready=ports[{i}].w.size()<4&&(cycles%4!=0);
+        code += [f'''ports[{i}].update(cycles);
+ dut.{p}_arready=ports[{i}].arready(cycles);
+ dut.{p}_awready=ports[{i}].awready(cycles);
+ dut.{p}_wready=ports[{i}].wready(cycles);
  dut.{p}_rvalid=ports[{i}].rv;dut.{p}_rid=ports[{i}].rid;dut.{p}_rdata=ports[{i}].rd;
  dut.{p}_rlast=1;dut.{p}_rresp=0;
  dut.{p}_bvalid=ports[{i}].bv;dut.{p}_bid=ports[{i}].bid;dut.{p}_bresp=0;''']
     code += ['dut.eval();']
     for i,p in enumerate(prefixes):
         code += [f'''if(dut.ap_rst_n) {{
- if(dut.{p}_rvalid&&dut.{p}_rready)ports[{i}].rv=false;
- if(dut.{p}_bvalid&&dut.{p}_bready)ports[{i}].bv=false;
- if(dut.{p}_arvalid&&dut.{p}_arready)ports[{i}].ar(dut.{p}_araddr,dut.{p}_arid,dut.{p}_arsize,dut.{p}_arlen);
- if(dut.{p}_awvalid&&dut.{p}_awready)ports[{i}].write_addr(dut.{p}_awaddr,dut.{p}_awid,dut.{p}_awsize,dut.{p}_awlen);
- if(dut.{p}_wvalid&&dut.{p}_wready)ports[{i}].write_data(dut.{p}_wdata,dut.{p}_wstrb,dut.{p}_wlast);
+ if(dut.{p}_rvalid&&dut.{p}_rready)ports[{i}].consume_read(cycles);
+ if(dut.{p}_bvalid&&dut.{p}_bready)ports[{i}].consume_write(cycles);
+ if(dut.{p}_arvalid&&dut.{p}_arready)ports[{i}].ar(dut.{p}_araddr,dut.{p}_arid,dut.{p}_arsize,dut.{p}_arlen,cycles);
+ if(dut.{p}_awvalid&&dut.{p}_awready)ports[{i}].write_addr(dut.{p}_awaddr,dut.{p}_awid,dut.{p}_awsize,dut.{p}_awlen,cycles);
+ if(dut.{p}_wvalid&&dut.{p}_wready)ports[{i}].write_data(dut.{p}_wdata,dut.{p}_wstrb,dut.{p}_wlast,cycles);
  }}''']
     code += [r'''
  dut.ap_clk=1;dut.eval();++cycles;
@@ -91,13 +75,30 @@ unsigned read(unsigned a){
 std::uint64_t read64(unsigned a){auto lo=read(a);return lo|(std::uint64_t(read(a+4))<<32);}
 int main(int argc,char** argv){
  try{
- Verilated::commandArgs(argc,argv);dut.ap_rst_n=0;for(unsigned i=0;i<8;++i)step();dut.ap_rst_n=1;step();
+ Verilated::commandArgs(argc,argv);
+#ifdef FPGA_WITH_RAMULATOR
+ if (argc != 2) throw std::runtime_error("Pass the Ramulator YAML path");
+ timing = std::make_unique<RamulatorTiming>(argv[1]);
+ model_data_base = '''+str(info.get('logical_base', 0))+r'''ULL;
+ axi_trace.open("ramulator-axi.jsonl");
+ if (!axi_trace) throw std::runtime_error("Cannot open Ramulator AXI trace");
+#endif
+ dut.ap_rst_n=0;for(unsigned i=0;i<8;++i)step();dut.ap_rst_n=1;step();
  if(read(0)!=0||read(4)!=0)throw std::runtime_error("Reset status");
  // Byte strobe readback and high (>4 GiB) relocation bases.
  write(abi::N,0x12345678);write(abi::N,0x0000ab00,2,true);if(read(abi::N)!=0x1234ab78)throw std::runtime_error("WSTRB failure");
  for(unsigned p=0;p<case_ports;++p){auto a=base(base_register_bank[p])+abi::GUARD;write(abi::BASE0+8*p,unsigned(a));write(abi::BASE0+8*p+4,unsigned(a>>32),15,true);if(read(abi::BASE0+8*p+4)!=unsigned(a>>32))throw std::runtime_error("High address lost");}
+#ifdef FPGA_WITH_RAMULATOR
+ std::ofstream results("ramulator-results.jsonl");
+#else
  std::ofstream results("functional-results.jsonl");
- for(unsigned rep=0;rep<2;++rep){for(unsigned n : std::vector<unsigned>'''+('{0,1,63,64,65,127,128,129,512,513}' if info['top']=='memory_probe' else '{case_n}')+r'''){
+#endif
+ if (!results) throw std::runtime_error("Cannot open simulation results");
+ for(unsigned rep=0;rep<'''+str(repetitions)+r''';++rep){for(unsigned n : std::vector<unsigned>'''+sizes+r'''){
+#ifdef FPGA_WITH_RAMULATOR
+ trace_n = n;
+ trace_rep = rep;
+#endif
  auto initial=case_input(n,rep),expected=case_expected(initial,n);
  auto input_file=save_input(initial,n,rep);
  auto packed=pack(initial,case_banks),want=pack(expected,case_banks);
@@ -111,33 +112,114 @@ int main(int argc,char** argv){
  for(auto& p:ports)if(!p.empty())throw std::runtime_error("Reported completion before memory drained");
  for(unsigned b=0;b<case_banks;++b)for(unsigned i=0;i<slab_bytes;++i){unsigned v=(i>=abi::GUARD&&i<abi::GUARD+want[b].size())?want[b][i-abi::GUARD]:0xa5;if(memory[b][i]!=v)throw std::runtime_error("Functional/guard mismatch byte "+std::to_string(i));}
  if(read64(abi::CORE_CYCLES)!=core)throw std::runtime_error("Unstable completion snapshot");
- results<<"{\"mode\":\"functional_axi_ram\",\"case\":\""<<case_name<<"\",\"functional_status\":\"pass\",\"n\":"<<n<<",\"repetition\":"<<rep<<",\"core_cycles\":"<<core<<",\"drain_cycles\":"<<drain<<",\"input_file\":\""<<input_file<<"\"}\n";
+ results<<"{\"mode\":\""<<simulation_mode<<"\",\"case\":\""<<case_name<<"\",\"functional_status\":\"pass\",\"n\":"<<n<<",\"repetition\":"<<rep<<",\"core_cycles\":"<<core<<",\"drain_cycles\":"<<drain<<",\"input_file\":\""<<input_file<<"\"";
+#ifdef FPGA_WITH_RAMULATOR
+ results<<",\"dram_ticks_per_axi_cycle\":"<<timing->ratio()
+        <<",\"axi_reads\":"<<ports[0].reads<<",\"axi_writes\":"<<ports[0].writes;
+#endif
+ results<<"}\n";
  }}
  dut.ap_rst_n=0;for(unsigned i=0;i<4;++i)step();dut.ap_rst_n=1;step();
  if(read(0)||read(4)||read64(abi::CORE_CYCLES))throw std::runtime_error("Post-run reset");
- std::cout<<case_name<<" functional wrapper/DUT PASS reads="<<reads<<" writes="<<writes<<"\n";return 0;
+ std::uint64_t reads = 0, writes = 0;
+ for (const auto& port : ports) { reads += port.reads; writes += port.writes; }
+ std::cout<<case_name<<" "<<simulation_mode<<" wrapper/DUT PASS reads="<<reads<<" writes="<<writes<<"\n";
+ return 0;
  }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}
 }
 ''']
     return '\n'.join(code)
 
 
-def main():
-    ap=argparse.ArgumentParser(description=__doc__);ap.add_argument('--prepared',required=True)
-    ap.add_argument('--generate-only',action='store_true');args=ap.parse_args()
-    out=Path(args.prepared).resolve();info=json.loads((out/'manifest.json').read_text())
-    for name,sha in info['rtl_sha256'].items():
-        if digest(out/'rtl'/name)!=sha: raise ValueError('RTL changed: '+name)
-    cpp=out/'functional.cpp';cpp.write_text(source(info))
-    if args.generate_only: print(cpp);return
-    verilator=os.environ.get('FPGA_VERILATOR',shutil.which('verilator') or 'verilator')
-    flags=json.loads((out/'host-flags.json').read_text())
-    cflags=['-std=c++17','-I'+str(out),'-I'+str(ROOT/'fpga/host'),'-Wno-unknown-pragmas',*flags]
-    run([verilator,'--cc','--exe','--build','--top-module','fpga_kernel','-Wno-fatal','--Mdir',out/'obj_dir',
-         '-CFLAGS',' '.join(cflags),*sorted((out/'rtl').glob('*v')),cpp],out,out/'functional-build.log')
-    run([out/'obj_dir/Vfpga_kernel'],out,out/'functional.log')
-    print((out/'functional.log').read_text())
+def ramulator_flags(prefix):
+    header = prefix / 'include' / 'ramulator' / 'base' / 'config.h'
+    if not header.is_file():
+        raise ValueError(f'Ramulator 2 headers missing under {prefix}; set RAMULATOR2_DIR')
+    libraries = [prefix / 'lib' / 'libramulator.so', prefix / 'lib64' / 'libramulator.so',
+                 *sorted((prefix / 'lib').glob('*/libramulator.so'))]
+    library = next((path for path in libraries if path.is_file()), None)
+    if library is None:
+        raise ValueError(f'libramulator.so missing under {prefix}; set RAMULATOR2_DIR')
+    cflags = ['-DFPGA_WITH_RAMULATOR', '-I'+str(header.parents[1]), '-I'+str(prefix/'include')]
+    # Verilator places -LDFLAGS before the objects in the link command.
+    ldflags = ['-L'+str(library.parent), '-Wl,-rpath,'+str(library.parent),
+               '-Wl,--no-as-needed', '-lramulator', '-Wl,--as-needed']
+    return cflags, ldflags, library
 
-if __name__=='__main__':
-    try: main()
-    except (ValueError,OSError) as e: print('ERROR: '+str(e),file=sys.stderr);sys.exit(2)
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument('--prepared', required=True, type=Path)
+    ap.add_argument('--output', type=Path, help='Separate directory for build and results')
+    ap.add_argument('--generate-only', action='store_true')
+    ap.add_argument('--ramulator-config', type=Path, help='Use this Ramulator 2 YAML instead of AXI RAM')
+    ap.add_argument('--n', type=int, help='Run one probe with this size and repetition 0')
+    args = ap.parse_args()
+
+    prepared = args.prepared.resolve()
+    info = json.loads((prepared/'manifest.json').read_text())
+    for name, sha in info['rtl_sha256'].items():
+        if digest(prepared/'rtl'/name) != sha:
+            raise ValueError('RTL changed: '+name)
+    if args.n is not None and (info['top'] != 'memory_probe' or not 0 <= args.n <= 8192):
+        ap.error('--n requires a memory probe and a size between 0 and 8192')
+    if args.ramulator_config is not None:
+        if (info['case'] != 'memory_probe_single' or info['banks'] != 1
+                or len(info['axi_ports']) != 1):
+            ap.error('Ramulator currently supports memory_probe_single with one AXI port')
+        if args.n is None:
+            ap.error('--ramulator-config requires --n to select one isolated probe run')
+
+    out = args.output.resolve() if args.output else prepared
+    out.mkdir(parents=True, exist_ok=True)
+    cpp = out/'functional.cpp'
+    cpp.write_text(source(info, args.n))
+    if args.generate_only:
+        print(cpp)
+        return
+
+    verilator = os.environ.get('FPGA_VERILATOR', shutil.which('verilator') or 'verilator')
+    flags = json.loads((prepared/'host-flags.json').read_text())
+    cflags = ['-I'+str(prepared), '-I'+str(ROOT/'fpga/host'), '-Wno-unknown-pragmas', *flags]
+    cxx = os.environ.get('FPGA_VERILATOR_CXX')
+    build_flags = ['-MAKEFLAGS', f'CXX={cxx} LINK={cxx}'] if cxx else []
+    run_args = []
+    mode = 'functional'
+    if args.ramulator_config is not None:
+        config = args.ramulator_config.resolve(strict=True)
+        prefix = os.environ.get('RAMULATOR2_DIR')
+        if not prefix:
+            ap.error('Set RAMULATOR2_DIR to the installed Ramulator 2 prefix')
+        includes, ldflags, library = ramulator_flags(Path(prefix).resolve())
+        cflags += ['-std=c++20', *includes]
+        build_flags += ['-LDFLAGS', ' '.join(ldflags)]
+        snapshot = out/'ramulator-config.yaml'
+        if config != snapshot:
+            shutil.copyfile(config, snapshot)
+        (out/'ramulator-run.json').write_text(json.dumps({
+            'config_sha256': digest(snapshot),
+            'library': str(library),
+            'library_sha256': digest(library),
+            'rtl_sha256': info['rtl_sha256'],
+            'logical_base': info['logical_base'],
+            'write_response': 'ramulator_acceptance',
+        }, indent=2)+'\n')
+        run_args.append(snapshot)
+        mode = 'ramulator'
+    else:
+        cflags.append('-std=c++17')
+
+    rtl = sorted(prepared/'rtl'/name for name in info['rtl_sha256'] if name.endswith(('.v', '.sv')))
+    run([verilator, '--cc', '--exe', '--build', '--top-module', 'fpga_kernel', '-Wno-fatal',
+         '--Mdir', out/'obj_dir', '-CFLAGS', ' '.join(cflags), *build_flags, *rtl, cpp],
+        out, out/f'{mode}-build.log')
+    run([out/'obj_dir/Vfpga_kernel', *run_args], out, out/f'{mode}.log')
+    print((out/f'{mode}.log').read_text())
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except (ValueError, OSError) as exc:
+        print('ERROR: '+str(exc), file=sys.stderr)
+        sys.exit(2)
