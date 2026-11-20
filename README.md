@@ -154,7 +154,7 @@ also perform this comparison when used directly. Golden data is updated through
 manual approval. Logs, input/configuration snapshots, metadata, per-case
 JSON results and `comparison.json` remain local and ignored by Git.
 
-The full CI validates all tests using:
+On a host with Bambu and Ramulator installed, run the full benchmark suite with:
 
 ```sh
 ./run_tests.sh --all --no-compare
@@ -241,7 +241,21 @@ Use `./run_tests.sh --list-boards` to inspect board profiles and
 `./run_tests.sh --clean-work --dry-run` to preview cleanup of old local build
 artifacts. Cleanup preserves the golden collection.
 
-The result workflow has standalone tests:
+## Repository checks
+
+The [Repository tests workflow](.github/workflows/tests.yml) runs on pushes
+to `main` and on pull requests targeting `main`. It checks the benchmark runner,
+golden results, generated benchmark adapters, FPGA build scripts and AXI
+validation tools on a GitHub-hosted Ubuntu runner.
+
+The optional benchmark job runs on a dedicated, isolated Linux x86-64
+self-hosted runner with the label `bambu-ramulator`. Configure `BAMBU_HLS`,
+`RAMULATOR2_DIR` and optionally `J` in the runner environment, then set the
+repository Actions variable `BAMBU_RUNNER_ENABLED` to `true`. The job runs the
+real Bambu/Ramulator smoke cases on pushes to `main`. To run every benchmark,
+use **Run workflow** on `main` and select the full benchmark option.
+
+To run the benchmark runner and golden-result tests locally:
 
 ```sh
 python3 -m unittest discover -s tools/tests -v

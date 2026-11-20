@@ -1,0 +1,65 @@
+name: Repository tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      full_benchmarks:
+        description: Run all Bambu and Ramulator benchmarks
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - name: Run repository test suites
+        shell: bash
+        run: |
+          status=0
+          for suite in tools/tests machsuite/tests polybench/tests fpga/tests \
+              fpga/hbm_reference/tests validation/tests; do
+            echo "::group::$suite"
+            python3 -B -m unittest discover -s "$suite" -v || status=1
+            echo "::endgroup::"
+          done
+          exit "$status"
+
+  benchmarks:
+    name: Bambu and Ramulator benchmarks
+    needs: tests
+    if: >-
+      vars.BAMBU_RUNNER_ENABLED == 'true' &&
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: [self-hosted, linux, x64, bambu-ramulator]
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - name: Run benchmarks
+        shell: bash
+        env:
+          FULL_BENCHMARKS: ${{ inputs.full_benchmarks }}
+        run: |
+          : "${BAMBU_HLS:?Set BAMBU_HLS in the runner environment}"
+          : "${RAMULATOR2_DIR:?Set RAMULATOR2_DIR in the runner environment}"
+          source "$BAMBU_HLS/settings.sh"
+          if [[ "$FULL_BENCHMARKS" == true ]]; then
+            ./run_tests.sh --all --no-compare
+          else
+            ./run_tests.sh --smoke --tests 'smoke_*' --no-compare
+          fi
