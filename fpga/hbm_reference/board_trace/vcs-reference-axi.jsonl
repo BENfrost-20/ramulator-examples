@@ -1,0 +1,5 @@
+{"event":"AR","n":1,"repetition":0,"axi_cycle":8558,"cycles_from_start":2,"time_ps":90285000,"axi_addr":77309411584,"id":0}
+{"event":"R","n":1,"repetition":0,"axi_cycle":8595,"cycles_from_start":39,"time_ps":90655000,"axi_addr":77309411584,"id":0}
+{"event":"AW","n":1,"repetition":0,"axi_cycle":8597,"cycles_from_start":41,"time_ps":90675000,"axi_addr":77309411584,"id":0}
+{"event":"W","n":1,"repetition":0,"axi_cycle":8597,"cycles_from_start":41,"time_ps":90675000}
+{"event":"B","n":1,"repetition":0,"axi_cycle":8628,"cycles_from_start":72,"time_ps":90985000,"axi_addr":77309411584,"id":0}

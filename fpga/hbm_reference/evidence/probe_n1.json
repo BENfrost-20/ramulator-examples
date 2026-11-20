@@ -1,0 +1,91 @@
+{
+  "case": "memory_probe_single",
+  "n": 1,
+  "repetition": 0,
+  "input_little_endian_hex": "03000000",
+  "expected_little_endian_hex": "dc9b5713",
+  "kernel_period_ns": 10,
+  "native_bambu_runs": [
+    {
+      "mode": "bambu_default",
+      "run": "probe-bambu.wtF1mV",
+      "native_cycles": 9,
+      "bambu_report_sha256": "493b135b50d871e4b0193e6426d490af329c9fb713aa31ea9ca28ec16f6a3e2d"
+    },
+    {
+      "mode": "bambu_fixed_15",
+      "run": "probe-bambu-fixed15.krepQ3",
+      "native_cycles": 34,
+      "bambu_report_sha256": "f7458a8aaf2d5a95dd85b5f6aa75d52984b90f8f29082322f933b86dd968881b",
+      "memory_read_delay_cycles": 15,
+      "memory_write_delay_cycles": 15
+    },
+    {
+      "mode": "bambu_ramulator_hbm2_2gbps",
+      "run": "probe-n1.OfTlKxx7",
+      "native_cycles": 13,
+      "bambu_report_sha256": "5dc2dd20f593f99c31d6c3b90eb496c05a90c5d05e105d79003f017fd53eb5ff",
+      "ramulator_config_sha256": "fe85a85039183183429d4e8dbfab9d2c4db2d6e197f2cdfde5e19a1cb0dd619f",
+      "dram_ticks_per_kernel_cycle": 5,
+      "mdpi_read_callback_cycles": 4
+    },
+    {
+      "mode": "bambu_ramulator_u55c_1800",
+      "run": "probe-bambu-u55c.RnuwaV",
+      "native_cycles": 12,
+      "bambu_report_sha256": "48ab616369fd13ea217524e0ce788a82c77fbb71b0e1a686e89316add2634ba6",
+      "ramulator_config_sha256": "4b99a7da9915a6aeff7efa09acc7c6d4fe2f0a0f3b7ec57d121eff3ff82488e1",
+      "dram_ticks_per_kernel_cycle": 9,
+      "mdpi_read_callback_cycles": 3
+    }
+  ],
+  "same_wrapper_runs": {
+    "verilator_ramulator": {
+      "run": "probe-ramulator.uRn0AA",
+      "core_cycles": 11,
+      "drain_cycles": 12,
+      "ar_to_r_cycles": 5,
+      "last_aw_w_to_b_cycles": 1,
+      "ramulator_config_sha256": "fe85a85039183183429d4e8dbfab9d2c4db2d6e197f2cdfde5e19a1cb0dd619f",
+      "ramulator_library_sha256": "903504de26d0f00ea360fc6e724cb54fddf14f08c0db84b70496192f630d3c46",
+      "write_response": "ramulator_acceptance"
+    },
+    "vcs_amd_hbm": {
+      "run": "probe-vcs.ME2VL9",
+      "core_cycles": 73,
+      "drain_cycles": 74,
+      "intervals_cycles": {
+        "start_to_ar": 2,
+        "ar_to_r": 37,
+        "r_to_later_aw_w": 2,
+        "later_aw_w_to_b": 31,
+        "b_to_done": 1,
+        "done_to_drain": 1
+      }
+    },
+    "u55c_hacc": {
+      "node": "hacc-u55c-08",
+      "pci_bdf": "0000:85:00.1",
+      "core_cycles": 49,
+      "drain_cycles": 50,
+      "trace": "probe_n1_u55c_axi.jsonl",
+      "intervals_cycles": {
+        "start_to_ar": 2,
+        "ar_to_r": 26,
+        "r_to_later_aw_w": 5,
+        "later_aw_w_to_b": 15,
+        "b_to_done": 1,
+        "done_to_drain": 1
+      },
+      "original_xclbin_sha256": "3e9d5cea87e165df2f7f42b40be6890ce729870a2e240a7be66d6ea6822e5e1e",
+      "traced_xclbin_sha256": "623dfa6b52bc344d41f37771550e0a67fb6534b0db72cbf9dbe5948a8b643b75",
+      "ab_run": "hacc-axi-ab.YAp0ne",
+      "ab_runs_matching": 4,
+      "reuse_run": "hacc-axi-reuse.DUquof",
+      "reuse_runs_matching": 4,
+      "traced_after_switch_and_reuse_equal": true,
+      "historical_core_cycles": 63,
+      "historical_drain_cycles": 64
+    }
+  }
+}

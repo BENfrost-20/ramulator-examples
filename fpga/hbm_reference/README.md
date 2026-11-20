@@ -10,6 +10,9 @@ This is a standalone behavioral VCS reference, separate from the older FPGA
 deployment/probe helpers in the parent directory. It is not a board deployment
 or a validated performance-equivalence result.
 
+The [single-port U55C probe comparison](PROBE.md) documents the separate
+one-word Bambu, Ramulator, VCS and HACC runs.
+
 ## Included files
 
 - prepare_integration.py: validates baseline input/RTL contracts, generates the

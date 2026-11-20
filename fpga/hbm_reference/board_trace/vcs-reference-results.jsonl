@@ -1,0 +1,1 @@
+{"mode":"vcs_amd_hbm","case":"memory_probe_single","functional_status":"pass","n":1,"repetition":0,"core_cycles":73,"drain_cycles":74,"input_file":"input-1-0.bin","axi_reads":1,"axi_writes":1,"ar_to_r_cycles":37,"aw_w_to_b_cycles":31}

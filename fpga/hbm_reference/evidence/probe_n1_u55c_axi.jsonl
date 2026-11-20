@@ -1,0 +1,13 @@
+{"event":"START","n":1,"repetition":0,"cycles_from_start":0}
+{"event":"AR","n":1,"repetition":0,"cycles_from_start":2,"axi_addr":256,"id":0}
+{"event":"R","n":1,"repetition":0,"cycles_from_start":28,"axi_addr":256,"id":0,"resp":0}
+{"event":"AW","n":1,"repetition":0,"cycles_from_start":30,"axi_addr":256,"id":0}
+{"event":"W","n":1,"repetition":0,"cycles_from_start":33,"wstrb":15}
+{"event":"B","n":1,"repetition":0,"cycles_from_start":48,"axi_addr":256,"id":0,"resp":0}
+{"event":"DONE","n":1,"repetition":0,"cycles_from_start":49}
+{"event":"DRAIN","n":1,"repetition":0,"cycles_from_start":50}
+{"event":"AR_VALID","n":1,"repetition":0,"cycles_from_start":2}
+{"event":"AW_VALID","n":1,"repetition":0,"cycles_from_start":30}
+{"event":"W_VALID","n":1,"repetition":0,"cycles_from_start":30}
+{"event":"R_VALID","n":1,"repetition":0,"cycles_from_start":28}
+{"event":"B_VALID","n":1,"repetition":0,"cycles_from_start":48}

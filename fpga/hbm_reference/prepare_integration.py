@@ -165,6 +165,13 @@ def testbench(a, b, c):
         for field in ("ruser", "buser"):
             dut.append(("m_axi_vec_" + letter + "_" + field, "1'b0"))
     lines.append(instance("vector_add", "dut", dut))
+    lines.extend(vendor_instances())
+    lines.extend([TB_TASKS, TB_MONITORS, TB_RUN, "endmodule\n"])
+    return "\n".join(lines)
+
+
+def vendor_instances():
+    lines = []
     bridge = [("kernel_clk", "kernel_clk"), ("memory_clk", "memory_clk"), ("resetn", "resetn")]
     for index, name in enumerate(("S_A", "S_B", "S_C", "S_LOAD")):
         for field in dict(MASTER_OUT, **MASTER_IN):
@@ -195,8 +202,7 @@ def testbench(a, b, c):
     ).split()
     hbm.extend(("AXI_00_" + field.upper(), "m_" + field) for field in direct)
     lines.append(instance("hbm_reference", "hbm", hbm))
-    lines.extend([TB_TASKS, TB_MONITORS, TB_RUN, "endmodule\n"])
-    return "\n".join(lines)
+    return lines
 
 
 TB_HEAD = r"""
@@ -240,19 +246,7 @@ TB_HEAD = r"""
   initial begin
 """
 
-TB_TASKS = r"""
-  function automatic bit loader_address_ok(input reg [63:0] addr);
-    integer bank;
-    begin
-      loader_address_ok = 0;
-      if (!$isunknown(addr) && addr[1:0] === 0)
-        for (bank=0; bank<3; bank=bank+1)
-          if (addr >= base[bank]-64'd32 && addr < base[bank]+64'd64)
-            loader_address_ok = 1;
-    end
-  endfunction
-
-  // The loader permits AW and W to handshake independently and never misses B.
+TB_LOADER = r"""  // The loader permits AW and W to handshake independently and never misses B.
   // Every transaction is completed before the task returns.
   task automatic write32(input reg [63:0] addr, input reg [31:0] value);
     begin
@@ -304,7 +298,21 @@ TB_TASKS = r"""
     end
   endtask
 
-  function automatic [31:0] guard_value(input integer bank, input integer word_index);
+"""
+
+TB_TASKS = r"""
+  function automatic bit loader_address_ok(input reg [63:0] addr);
+    integer bank;
+    begin
+      loader_address_ok = 0;
+      if (!$isunknown(addr) && addr[1:0] === 0)
+        for (bank=0; bank<3; bank=bank+1)
+          if (addr >= base[bank]-64'd32 && addr < base[bank]+64'd64)
+            loader_address_ok = 1;
+    end
+  endfunction
+
+""" + TB_LOADER + r"""  function automatic [31:0] guard_value(input integer bank, input integer word_index);
     guard_value = 32'hb16b0000 ^ (bank << 8) ^ (word_index + 8);
   endfunction
 
@@ -742,11 +750,11 @@ def rebuild_testbench(run):
     print("TESTBENCH_REBUILD_OK:", work / "tb_hbm_bambu_simv")
 
 
-def compile_run(run):
-    verify_export(run)
+def compile_vendor(run, export_run):
+    verify_export(export_run)
     if (run / "vcs").exists():
         raise ValueError("This run already has a vcs directory. Prepare a new run to retry without overwriting evidence.")
-    scripts = [locate_script(run, name) for name in ("export-hbm", "export-bridge")]
+    scripts = [locate_script(export_run, name) for name in ("export-hbm", "export-bridge")]
     # Validate both generated formats before starting any compiler.
     patched = [preserve_libraries(script) for script in scripts]
     data_plan, metadata_hashes = plan_export_data(scripts)
@@ -773,17 +781,20 @@ def compile_run(run):
     setup += ["%s:vcs_lib/%s" % (name, name) for name in libraries]
     setup += ["OTHERS=" + str(base_libs / "synopsys_sim.setup")]
     (work / "synopsys_sim.setup").write_text("\n".join(setup) + "\n")
-    compile_testbench(run)
-    build = {
+    return {
         "libraries": libraries,
         "export_data_sha256": data_hashes,
         "export_metadata_sha256": metadata_hashes,
         "export_script_sha256": {str(path): sha(path) for path in scripts},
         "synopsys_sim_setup_sha256": sha(work / "synopsys_sim.setup"),
         "tools": {name: shutil.which(name) for name in ("vlogan", "vcs", "vhdlan")},
-        "tb_sha256": sha(run / "tb_hbm_bambu.sv"),
-        "testbench_rebuild_complete": True,
     }
+
+
+def compile_run(run):
+    build = compile_vendor(run, run)
+    compile_testbench(run)
+    build.update(tb_sha256=sha(run / "tb_hbm_bambu.sv"), testbench_rebuild_complete=True)
     (run / "build.json").write_text(json.dumps(build, indent=2) + "\n")
     print("COMPILE_AND_ELABORATE_OK:", work / "tb_hbm_bambu_simv")
 
