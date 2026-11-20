@@ -1,0 +1,22 @@
+{
+  "board": "xcu55c",
+  "simulator": "questa",
+  "simulator_release": "2024.1",
+  "vivado_release": "2024.2",
+  "ip_vlnv": "xilinx.com:ip:hbm:1.0",
+  "xci": "/REPLACE/verified-platform-subsystem.xci",
+  "compiled_libraries": "/REPLACE/questa-2024.1-vivado-2024.2",
+  "project": "/REPLACE/integrated-probe-memory-reference.xpr",
+  "testbench_top": "REPLACE",
+  "runtime": "1ms",
+  "kernel_mhz": 100,
+  "interface_clocks_mhz": [],
+  "memory_clocks_mhz": [],
+  "initialization": "REPLACE_WITH_INSTALLED_IP_SUPPORTED_SEQUENCE_AND_READY_SIGNAL",
+  "native_protocol": "REPLACE_WITH_VERIFIED_AXI3_WIDTH_ID_BURST_LIMITS",
+  "conversion": "REPLACE_WITH_AXI4_TO_AXI3_WIDTH_AND_CDC_CONFIGURATION",
+  "observation_boundary": "wrapper/platform AXI",
+  "fidelity": {"read_latency": "unknown", "write_latency": "unknown", "bank_row": "unknown", "refresh": "unknown", "controller_policy": "unknown", "queues": "unknown"},
+  "platform_differences": ["REPLACE_WITH_STANDALONE_VS_LINKED_SHELL_DIFFERENCES"],
+  "evidence": "REPLACE_WITH_2024.2_IP_GUIDE_AND_MODEL_CONFIGURATION_REFERENCES"
+}
