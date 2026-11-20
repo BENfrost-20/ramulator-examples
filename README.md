@@ -35,10 +35,12 @@ configuration. Run a suite directly or use `run_tests.sh` to execute several sui
 | [fpga/](fpga/README.md) | Bambu RTL preparation, FPGA builds, VCS reference and HACC deployment |
 | [validation/](validation/README.md) | Experimental memory-model generation and trace analysis |
 
-`run_tests.sh` executes the selected suites in sequence and compares their results
-with the latest approved golden collection. It completes the remaining suites
-after a failure and returns a failure status for failed tests or cycle-count
-regressions.
+`run_tests.sh` runs up to `J` cases concurrently within each selected suite.
+The same limit applies when running a suite directly. If `J` is unset or empty,
+cases run one at a time. Each case has its own working directory, temporary
+files and log. The runner finishes the remaining cases and suites after a test
+fails, then compares with the latest approved golden collection. Failed cases
+and cycle-count regressions produce a nonzero exit status.
 
 `boards.json` defines the Bambu device, default clock and memory configuration
 for each board. Standard memory presets come from the Bambu installation under

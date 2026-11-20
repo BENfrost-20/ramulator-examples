@@ -1,5 +1,7 @@
 """Stage inputs and record Bambu co-simulation results. Uses the Python 3 standard library."""
-from contextlib import suppress
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from contextlib import contextmanager, suppress
+from functools import partial
 import csv
 import datetime as dt
 import getpass
@@ -16,6 +18,7 @@ import signal
 import socket
 import subprocess
 import sys
+from threading import Event
 import time
 import uuid
 import xml.etree.ElementTree as ET
@@ -248,7 +251,9 @@ def stage_case(case, snapshot, config_override, bambu, profile=None):
     return argv, yaml
 
 
-def launch(argv, work, log, env, timeout):
+def launch(argv, work, log, env, timeout, cancelled=None):
+    if cancelled is not None and cancelled.is_set():
+        raise KeyboardInterrupt
     with log.open("w", encoding="utf-8") as handle:
         handle.write(f"$ {shlex.join(argv)}\n")
         handle.flush()
@@ -257,7 +262,17 @@ def launch(argv, work, log, env, timeout):
             marker = work / ".process.json"
             try:
                 write_json(marker, {"pgid": process.pid, "host": socket.gethostname()})
-                return process.wait(timeout=timeout)
+                if cancelled is None:
+                    return process.wait(timeout=timeout)
+                deadline = time.monotonic() + timeout
+                while not cancelled.is_set():
+                    remaining = max(0, deadline - time.monotonic())
+                    try:
+                        return process.wait(timeout=min(remaining, 0.25))
+                    except subprocess.TimeoutExpired:
+                        if time.monotonic() >= deadline:
+                            raise
+                raise KeyboardInterrupt
             except (subprocess.TimeoutExpired, KeyboardInterrupt, OSError) as exc:
                 with suppress(ProcessLookupError):
                     os.killpg(process.pid, signal.SIGTERM)
@@ -355,8 +370,87 @@ def assess(case, row, log, work, yaml, exit_code):
     return "PASS", "functional checks and MDPI traffic confirmed", details
 
 
+def execute_case(case, *, run, config, bambu, profile, env, timeout, dry_run, cancelled=None):
+    if cancelled is not None and cancelled.is_set():
+        raise KeyboardInterrupt
+    name = case["name"]
+    log = run / "logs" / f"{name}.log"
+    snapshot = run / "config_snapshot" / name
+    row = dict(board=profile["name"], test_name=name, log_file=str(log.relative_to(run)))
+    clock_ns = None
+    details = {}
+    started = time.monotonic()
+    try:
+        snapshot.mkdir()
+        argv, yaml = stage_case(case, snapshot, config, bambu, profile)
+        clock_ns = next(flag.split("=", 1)[1] for flag in argv if flag.startswith("--clock-period="))
+        row["yaml_config"] = str(yaml.relative_to(run))
+        if dry_run:
+            log.write_text(f"RAMULATOR2_CONFIG={shlex.quote(str(yaml))}\n$ {shlex.join(argv)}\n",
+                           encoding="utf-8")
+            return case, None, {"planned": True, "yaml_config": str(yaml)}, clock_ns
+        work = run / "work" / name
+        temporary = work / "tmp"
+        temporary.mkdir(parents=True)
+        case_env = dict(env, RAMULATOR2_CONFIG=str(yaml), TMPDIR=str(temporary),
+                        TMP=str(temporary), TEMP=str(temporary),
+                        BAMBU_IPC_FILENAME=str(work / "panda_ipc_mmap"))
+        started = time.monotonic()
+        exit_code = launch(argv, work, log, case_env, timeout, cancelled)
+        row["wall_time_s"] = f"{time.monotonic() - started:.3f}"
+        for artifact in ("output/bambu_results.xml", "output/bambu_time_simulation.txt", "output.data"):
+            source = work / artifact
+            if source.is_file():
+                shutil.copyfile(source, log.with_suffix(f".{source.name}"))
+        status, reason, details = assess(case, row, log, work, yaml, exit_code)
+    except (OSError, ValueError, KeyError, BadZipFile) as exc:
+        status, reason = "ERROR", str(exc)
+    row["status"] = status
+    if not dry_run:
+        row.setdefault("wall_time_s", f"{time.monotonic() - started:.3f}")
+    with log.open("a", encoding="utf-8") as handle:
+        handle.write(f"\nRUNNER: {status}: {reason}\n")
+    return case, row, dict(details, status=status, reason=reason,
+                           yaml_config=row.get("yaml_config"),
+                           timestamp=dt.datetime.now(dt.timezone.utc).isoformat()), clock_ns
+
+
+@contextmanager
+def case_results(execute, cases, workers):
+    """Yield finished cases and stop their subprocesses if collection is interrupted."""
+    if workers == 1:
+        yield map(execute, cases)
+        return
+    cancelled = Event()
+    futures = []
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        try:
+            for case in cases:
+                futures.append(pool.submit(execute, case, cancelled=cancelled))
+            yield (future.result() for future in as_completed(futures))
+        finally:
+            cancelled.set()
+            for future in futures:
+                future.cancel()
+
+
+def log_tail(log):
+    with log.open("rb") as handle:
+        end = handle.seek(0, os.SEEK_END)
+        handle.seek(max(0, end - 8192))
+        return "\n".join(handle.read().decode("utf-8", errors="replace").splitlines()[-20:])
+
+
 def main(suite, tag, config, dry_run, board="xcu250", keep_work=False, case_name="", cases=(), compare_results=True):
     profile = board_profile(board)
+    jobs = os.environ.get("J") or "1"
+    if not re.fullmatch(r"[1-9][0-9]*", jobs):
+        raise ValueError("J must be a positive integer")
+    jobs = int(jobs)
+    names = [case["name"] for case in cases]
+    if len(set(names)) != len(names):
+        raise ValueError(f"Duplicate case names in suite {suite}")
+    workers = 1 if dry_run else max(1, min(jobs, len(cases)))
     now = dt.datetime.now(dt.timezone.utc)
     run = create_run(tag, now)
     with work_lock(run) as locked:
@@ -391,7 +485,7 @@ def main(suite, tag, config, dry_run, board="xcu250", keep_work=False, case_name
             "config_override": str(Path(config_override).resolve()) if config_override else None,
             "tool_paths": paths, "tool_versions": versions, "ramulator_library": library,
             "bambu_identity": tool_identity(paths.get("bambu"), versions.get("bambu")),
-            "requested_cases": [case["name"] for case in cases],
+            "requested_cases": names, "jobs": jobs,
             "comparison_enabled": compare_results,
             "preflight_errors": preflight, "cases": {},
         }
@@ -418,75 +512,53 @@ def main(suite, tag, config, dry_run, board="xcu250", keep_work=False, case_name
                     print(f"[ERROR] Pre-flight: {error}", file=sys.stderr)
                 failed = True
             else:
+                print(f"Running {len(cases)} cases with up to {workers} worker(s).", flush=True)
                 print(f"{'TEST':<25} {'STATUS':<7} {'CYCLES':>11} {'WALL S':>8} {'READS':>9} {'WRITES':>9}", flush=True)
-                for case in cases:
-                    name = case["name"]
-                    log = run / "logs" / f"{name}.log"
-                    snapshot = run / "config_snapshot" / name
-                    snapshot.mkdir()
-                    row = dict(board=board, test_name=name, log_file=str(log.relative_to(run)))
-                    clock_ns = None
-                    details = {}
-                    started = time.monotonic()
-                    try:
-                        argv, yaml = stage_case(case, snapshot, config_override, paths["bambu"], profile)
-                        clock_ns = next(flag.split("=", 1)[1] for flag in argv if flag.startswith("--clock-period="))
-                        row["yaml_config"] = str(yaml.relative_to(run))
-                        if dry_run:
-                            log.write_text(f"RAMULATOR2_CONFIG={shlex.quote(str(yaml))}\n$ {shlex.join(argv)}\n",
-                                           encoding="utf-8")
+                execute = partial(execute_case, run=run, config=config_override, bambu=paths["bambu"],
+                                  profile=profile, env=env, timeout=int(timeout_text), dry_run=dry_run)
+                with case_results(execute, cases, workers) as results:
+                    for case, row, details, clock_ns in results:
+                        name = case["name"]
+                        metadata["cases"][name] = details
+                        if row is None:
                             print(f"{name:<25} PLANNED", flush=True)
-                            metadata["cases"][name] = {"planned": True, "yaml_config": str(yaml)}
                             continue
-                        work = run / "work" / name
-                        (work / "tmp").mkdir(parents=True)
-                        case_env = dict(env, RAMULATOR2_CONFIG=str(yaml), TMPDIR=str(work / "tmp"),
-                                        BAMBU_IPC_FILENAME=str(work / "panda_ipc_mmap"))
-                        started = time.monotonic()
-                        exit_code = launch(argv, work, log, case_env, int(timeout_text))
-                        row["wall_time_s"] = f"{time.monotonic() - started:.3f}"
-                        for artifact in ("output/bambu_results.xml", "output/bambu_time_simulation.txt", "output.data"):
-                            source = work / artifact
-                            if source.is_file():
-                                shutil.copyfile(source, log.with_suffix(f".{source.name}"))
-                        status, reason, details = assess(case, row, log, work, yaml, exit_code)
-                    except (OSError, ValueError, KeyError, BadZipFile) as exc:
-                        status, reason = "ERROR", str(exc)
-                    row["status"] = status
-                    if not dry_run:
-                        row.setdefault("wall_time_s", f"{time.monotonic() - started:.3f}")
-                    with log.open("a", encoding="utf-8") as handle:
-                        handle.write(f"\nRUNNER: {status}: {reason}\n")
-                    compressed = None
-                    if not dry_run:
-                        try:
-                            compressed = compress_log(log)
-                            row["log_file"] = str(compressed.relative_to(run))
-                        except OSError as exc:
-                            details["cleanup_warning"] = f"Log compression failed: {exc}"
-                    writer.writerow(row)
-                    output.flush()
-                    os.fsync(output.fileno())
-                    metadata["cases"][name] = dict(details, status=status, reason=reason,
-                                                   yaml_config=row.get("yaml_config"), log_file=row["log_file"],
-                                                   timestamp=dt.datetime.now(dt.timezone.utc).isoformat())
-                    write_json(run / "metadata.json", metadata)
-                    if not dry_run:
-                        record_result(run, metadata, case, row, snapshot, clock_ns)
-                    if compressed:
-                        try:
-                            log.unlink()
-                            if status == "PASS" and not keep_work:
-                                metadata["cases"][name]["work_cleanup"] = prune_work(run / "work" / name)
-                        except OSError as exc:
-                            metadata["cases"][name]["cleanup_warning"] = str(exc)
+                        status = row["status"]
+                        log = run / row["log_file"]
+                        failure_output = None
+                        if status != "PASS":
+                            failed = True
+                            failure_output = log_tail(log)
+                        compressed = None
+                        if not dry_run:
+                            try:
+                                compressed = compress_log(log)
+                                row["log_file"] = str(compressed.relative_to(run))
+                            except OSError as exc:
+                                details["cleanup_warning"] = f"Log compression failed: {exc}"
+                        writer.writerow(row)
+                        output.flush()
+                        os.fsync(output.fileno())
+                        details["log_file"] = row["log_file"]
                         write_json(run / "metadata.json", metadata)
-                    if metadata["cases"][name].get("cleanup_warning"):
-                        print(f"[WARNING] {name} cleanup: {metadata['cases'][name]['cleanup_warning']}", file=sys.stderr)
-                    failed |= status != "PASS"
-                    print(f"{name:<25} {status:<7} {str(row.get('total_sim_cycles', '-')):>11} "
-                          f"{row.get('wall_time_s', '-'):>8} {str(row.get('dram_read_reqs', '-')):>9} "
-                          f"{str(row.get('dram_write_reqs', '-')):>9}", flush=True)
+                        if not dry_run:
+                            record_result(run, metadata, case, row, run / "config_snapshot" / name, clock_ns)
+                        if compressed:
+                            try:
+                                log.unlink()
+                                if status == "PASS" and not keep_work:
+                                    details["work_cleanup"] = prune_work(run / "work" / name)
+                            except OSError as exc:
+                                details["cleanup_warning"] = str(exc)
+                            write_json(run / "metadata.json", metadata)
+                        if failure_output is not None:
+                            print(f"[ERROR] {name} ({run / row['log_file']}):\n{failure_output}",
+                                  file=sys.stderr, flush=True)
+                        if "cleanup_warning" in details:
+                            print(f"[WARNING] {name} cleanup: {details['cleanup_warning']}", file=sys.stderr)
+                        print(f"{name:<25} {status:<7} {str(row.get('total_sim_cycles', '-')):>11} "
+                              f"{row.get('wall_time_s', '-'):>8} {str(row.get('dram_read_reqs', '-')):>9} "
+                              f"{str(row.get('dram_write_reqs', '-')):>9}", flush=True)
         write_json(run / "metadata.json", metadata)
         (run / ".complete").touch()
         if compare_results and not dry_run and not os.environ.get("RAMULATOR_BATCH"):
