@@ -32,6 +32,8 @@ configuration. Run a suite directly or use `run_tests.sh` to execute several sui
 | `machsuite/` | 19 official workloads from a pinned source submodule, with generated AXI/MDPI adapters |
 | `results/` | Manually approved versioned golden data and collection/comparison scripts |
 | `tools/` | Environment checks, input staging, local execution and golden comparison |
+| [fpga/](fpga/README.md) | Bambu RTL preparation, FPGA builds, VCS reference and HACC deployment |
+| [validation/](validation/README.md) | Experimental memory-model generation and trace analysis |
 
 `run_tests.sh` executes the selected suites in sequence and compares their results
 with the latest approved golden collection. It completes the remaining suites
@@ -45,6 +47,15 @@ Test-specific YAMLs live next to their owning tests: `smoke/configs/` contains
 the recorded DDR5 diagnostic variant and a 32-channel HBM2 configuration (also
 selected by the HBM board aliases), while `smoke/clock_ratio.yaml` configures the ratio variants.
 `--config PATH` overrides the YAML for an execution.
+
+## FPGA and HBM workflows
+
+- [Build a bitstream](fpga/BUILD.md) with the build-only driver.
+- [Deploy to HACC](fpga/HACC.md) with the portable hardware and host bundle.
+- [Reproduce the measured U55C probe](fpga/hbm_reference/PROBE.md) with Bambu,
+  Ramulator, AMD VCS and hardware AXI traces.
+- [Configure a new memory-model experiment](validation/README.md) with the
+  experimental reference generator and traffic analysis tools.
 
 ## Setup and execution
 

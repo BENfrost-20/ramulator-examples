@@ -1,100 +1,33 @@
-# Experimental memory validation
+# Experimental memory validation tools
 
-This branch inherits the hardware commits. `fpga/` is identical to the hardware
-branch; validation-specific files live here. No shared runner, recipe, source
-snapshot or golden approval is changed. No server build/simulation or tool
-installation was performed. Source generation and native/Python tests are not
-RTL simulation, IP generation, implementation timing closure or board testing.
+This directory builds configurable reference benches and analyzes AXI traffic.
+Use the [recorded single-port comparison](../fpga/hbm_reference/PROBE.md) to
+reproduce the measured U55C probe. Use the generator here to explore a
+different configured AMD memory model or a range of calibration sizes.
 
-## Selected Ferrandi integration and provenance
+## Native Ramulator calibration with receipts
 
-Use **ferrandi/PandA-bambu `feature/ramulator` at
-`d1975e817a77ac3fe046ccb3adb471e05224ec81`**, whose Git tree pins
-**ferrandi/ramulator2 `9a8ed857455d041524043bc5fb45eb7f07e6a731`** under
-`ext/ramulator2-no-spdlog`. The integration was found by auditing public branches,
-tags, the full feature tree, `.gitmodules`, MDPI driver/build rules, the dedicated
-CI workflow, and its production RTL/protocol/clock regressions. It was not
-inferred from one identifier in `main`. See `fpga/toolchain.json` for source hashes.
-The branch's CI uses CLANG13, Verilator, a C++20 MDPI host and the standard
-Ramulator install layout; current Bambu itself requires GCC >=13/C++23.
+The experimental calibration runner uses the Ferrandi integration pinned in
+[toolchain.json](../fpga/toolchain.json). For a compatible installation set
+FPGA_BAMBU and FPGA_BAMBU_SOURCE or supply FPGA_TOOLCHAIN_RECEIPT using the
+[FPGA guide](../fpga/README.md). Set RAMULATOR2_DIR to the installed library
+prefix and FPGA_RAMULATOR_RECEIPT to its
+[build receipt](profiles/ramulator-receipt.example.json).
 
-The server's installed candidate Bambu identifies `909639b4b` and its source
-remote is Jesun. It is not used as a substitute. A built Ferrandi installation
-was not established. Hardware generation can independently use the reviewed
-Ferrandi `main`/`2026.11` revision `cda4db2`; only the Ramulator mode requires
-the integration branch. No Vitis HLS algorithm synthesis is used.
-
-`src/Parameter.cpp` constructs `Version: <package> - Revision <revision_hash>`
-with an optional branch suffix. The checker accepts a 7–40-character revision
-when Git resolves it unambiguously to the clean selected source, recording the
-binary SHA-256. A hash-checked source/build/install receipt is an alternative
-that needs no source checkout at deployment runtime. Remote URL alone is never
-binary-build proof. Receipt artifact hashes are checked under the installation
-prefix; incomplete evidence is reported rather than fabricated. The host
-executable itself does not require a source checkout.
-
-On a **separately authorized build machine**, obtain/build the selected toolchain
-using its documented prerequisites and CI settings. For the dependency, the
-selected Ferrandi branch provides:
+Run from the repository root.
 
 ```bash
-# In the pinned recursive Ferrandi checkout; performs a build/install, so this
-# was NOT run on the read-only server.
-bash panda_regressions/hls/bambu_ramulator/prepare_ramulator.sh /absolute/fresh/ramulator-build
-source /absolute/ferrandi-bambu-install/settings.sh
-export FPGA_BAMBU=/absolute/ferrandi-bambu-install/bin/bambu
-export FPGA_BAMBU_SOURCE=/absolute/pinned/Ferrandi-PandA-bambu
-export RAMULATOR2_DIR=/absolute/fresh/ramulator-build/install
+python3 validation/ramulator.py --tests memory_probe_single --n 513 \
+  --board xcu55c --config validation/profiles/hbm2_experimental.yaml \
+  --output .fpga/ramulator-513
+python3 validation/ramulator.py --tests memory_probe_single --n 0 \
+  --board xcu55c --config validation/profiles/hbm2_experimental.yaml \
+  --output .fpga/ramulator-0
 ```
 
-Record the actual built library hash and build/log evidence using
-`profiles/ramulator-receipt.example.json`; set `FPGA_RAMULATOR_RECEIPT`.
-For a packaged Bambu installation set `FPGA_TOOLCHAIN_RECEIPT` instead of
-`FPGA_BAMBU_SOURCE`, following `fpga/profiles/toolchain-receipt.example.json`.
-No script silently resets/checks out a dependency or installs tools.
-
-## Five distinct execution modes
-
-1. **Bambu + Ferrandi Ramulator co-simulation**: existing commands remain
-   `./smoke/run.sh --case smoke_axi_1ch --board xcu55c --no-compare` and
-   `./micro/run.sh --tests 't01_clock,t02_single_read' --board xcu55c --no-compare`.
-   The focused experimental driver additionally fingerprints the Ferrandi
-   installation and supports calibration n without changing suite recipes:
-
-   ```bash
-   python3 validation/ramulator.py --tests memory_probe_single --n 513 \
-     --board xcu55c --config validation/profiles/hbm2_experimental.yaml \
-     --output .fpga/ramulator-513
-   python3 validation/ramulator.py --tests memory_probe_single --n 0 \
-     --board xcu55c --config validation/profiles/hbm2_experimental.yaml \
-     --output .fpga/ramulator-0
-   ```
-
-   Calibration XML inputs call the same C kernel; the included unused standalone
-   main is renamed in a staging wrapper. No benchmark algorithm/source snapshot
-   is edited. Fixed suite dimensions cannot be overridden with calibration n.
-   The n=0 result may legitimately report zero traffic. This driver was not run
-   locally: Ferrandi binaries/library, Linux and Verilator are unavailable.
-
-2. **Functional wrapper/DUT RTL with simple AXI RAM**:
-   `python3 fpga/functional.py --prepared .fpga/prepared/probe-single`.
-   This uses deterministic backpressure and a bounded single-beat 32-bit memory
-   responder. It tests >4-GiB relocation, guards, repeats, reset, byte strobes,
-   oracle values and wrapper completion. It is not an HBM/DDR timing model.
-   `python3 fpga/check_rtl.py --bench completion --simulator verilator` runs the
-   actual tracker/control integration counterexample bench separately.
-   Both RTL tests are prepared but unrun here.
-
-3. **Vitis hw_emu**: follow `fpga/README.md` package/link/host commands with
-   target `hw_emu`. Accurate kernel RTL does not establish accurate platform
-   memory timing. A waveform/debug switch cannot improve model fidelity.
-
-4. **Vendor-memory reference**: use the concrete generator below, initially for
-   `memory_probe_single` and the HBM backend. An IP traffic-generator example
-   remains a separate availability smoke, not execution of the probe.
-
-5. **Physical board**: the hardware host deliberately loads the xclbin only
-   when manually invoked later. No board programming or measurement occurred.
+The runner fingerprints the installed toolchain and generates inputs from the
+same C probe. Use n for calibration cases. A zero-length probe can complete
+without memory traffic. The runner writes experimental results under .fpga.
 
 ## Concrete generated HBM reference slice
 
@@ -168,12 +101,11 @@ launcher, `vendor-results.jsonl` and per-port traces in the simulation working
 directory. A generated launcher or a successful IP traffic-generator example
 is not a completed benchmark simulation.
 
-The first selected third-party backend is **Questa 2024.1 SE**; VCS
-**V-2023.12-SP1** is explicitly selectable via the same model configuration and
-`--simulator vcs`. The server has Questa **10.7c** and VCS **V-2023.12** metadata;
-a supported patched release and a usable simulator license were not established.
-`FPGA_QUESTA`/`FPGA_VCS` select simulator binary directories. xsim is available
-for supported functional checks, and is not selected for this HBM reference.
+This generator's simulator checks accept Questa 2024.1 SE or VCS
+V-2023.12-SP1. Select the simulator in the model configuration and with the
+corresponding command option. FPGA_QUESTA and FPGA_VCS select binary
+directories. The recorded standalone VCS probe has its own simulator
+settings in the [HBM reference](../fpga/hbm_reference/PROBE.md).
 
 Build encrypted AMD libraries deliberately, once per supported tool/simulator
 combination, on a writable authorized machine (this can be expensive):
@@ -244,32 +176,12 @@ not assert topology/timing/queue alignment. The report refuses performance
 ratios for missing/mismatched inputs, RTL, clocks, measurement boundaries,
 unverified alignment, hw_emu/simple-RAM performance references, or unknown
 vendor fidelity. It reports actual differences without tuning or a predetermined
-error range. No measured cross-mode or single/banked speedup exists yet.
+error range. See the recorded probe for the measured single-port comparison.
 
-## Actual observations and blockers
+## Validation scope
 
-Local: eight native algorithm/oracle/packing checks, 12 deployment tests,
-14 validation tests and 27 existing tests passed. Python/source-generation
-checks passed. The original CLI help works; original dry-run commands reach
-preflight and fail due to absent Linux/Bambu/Verilator/Ramulator prerequisites.
-No original command semantics or golden behavior changed. Control/tracker and
-actual-DUT RTL benches were prepared **but not run**. No XO, bitstream, hw_emu,
-vendor benchmark simulation, timing closure or board measurement is claimed.
-
-Server: Vivado/Vitis/Vitis HLS 2024.2; U280/U55C platform candidates; no U250
-platform found in the inspected platform directory; XRT 2.14.354 (2022.2), whose
-compatibility with the chosen 2024.2 platform needs verification. HBM/DDR IP and
-HBM Questa/VCS encrypted model files exist. A later scan found Vivado ML
-Enterprise version **2025.03**, permanent, in `Xilinx.lic`, in addition to older
-files; effective license checkout/part access remains untested. No supported
-Questa/VCS release/license has been established. Platform shell compatibility,
-configured standalone XCI/model products, initialization, memory clocks,
-capacities and model fidelity remain prerequisites.
-
-Audit exception: the initial `vitis_hls -version` command automatically updated
-`/data2/home/pelorosso/vitis_hls.log` (15:35:44 on 13 November 2026). This was an
-unintended write during the read-only audit; it was not removed or altered
-further. No build, simulation, upload, installation, configuration change or
-board programming was performed. Subsequent inspection used file metadata.
-Automatic review also refused full `env.sh` and proprietary-model excerpts;
-those files were not exported and are not prerequisites of this delivery.
+The source tests cover the generated reference bench, AXI monitor and report
+checks. A new vendor-memory reference also requires a reviewed XCI,
+initialization sequence, simulator and compiled libraries for that exact
+configuration. Preserve the raw trace, manifests and reports for each run
+before comparing it with physical hardware.

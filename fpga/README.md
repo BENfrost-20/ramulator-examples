@@ -1,7 +1,9 @@
 # Experimental Bambu FPGA deployment (2024.2)
 
-See the [Ferrandi-to-HACC workflow](HACC.md) for site paths, portable hardware
-bundles, stage reuse and the U55C smoke test.
+Use the [build guide](BUILD.md) for Vivado/Vitis artifacts and the
+[Ferrandi-to-HACC workflow](HACC.md) to export a bundle and run it on the
+reserved board. The [U55C probe comparison](hbm_reference/PROBE.md) has the
+recorded Bambu, Ramulator, AMD VCS and hardware results.
 
 ## Ramulator timing with the deployed wrapper
 
@@ -17,13 +19,12 @@ separate from the prepared build.
 ```bash
 cd "$HOME/thesis/ramulator-examples"
 prepared="$PWD/.fpga/bitstream-xfTkobFQ/probe-single"
-probe="$HOME/thesis/probe-n1.OfTlKxx7"
 export RAMULATOR2_DIR="$HOME/thesis/ramulator-ferrandi-20261116-105256/install"
 export FPGA_VERILATOR=/opt/verilator/verilator-5.030/bin/verilator
 export FPGA_VERILATOR_CXX=/usr/bin/g++-13
 out=$(mktemp -d "$PWD/.fpga/probe-ramulator.XXXXXX")
 python3 -B fpga/functional.py --prepared "$prepared" --output "$out" \
-  --ramulator-config "$probe/hbm2_32ch.yaml" --n 1
+  --ramulator-config "$PWD/smoke/configs/hbm2_32ch.yaml" --n 1
 cat "$out/ramulator-results.jsonl" "$out/ramulator-axi.jsonl"
 ```
 
@@ -49,114 +50,25 @@ calibration tasks.
 Omit `--ramulator-config` to use the default AXI RAM. Pass `--n 1` there as well
 to run the same isolated input and control sequence.
 
-## Standalone HBM simulation update (17 November 2026)
+## Supported adapters and case selection
 
-The source/configuration checkpoint in [hbm_reference/](hbm_reference/README.md)
-contains the actual three-master vector_add VCS/HBM smoke that passed two launches.
-Its minimal evidence and complete tool-version manifest are tracked there.
-It does not use the older probe ABI or establish FPGA deployment/performance
-equivalence. The historical deployment status below describes the earlier flow.
+The deployment adapters cover memory_probe_single, memory_probe_banked,
+smoke_axi_1ch, t01_clock, t02_single_read, t03_read_after_write, t04_stream
+and t06_byte_lanes. Deployment requires the generated interface to pass
+preparation for the selected board. Other cases appear in the inventory
+with their deployment status.
 
-This directory adds a focused deployment path. It does not change the shared
-runner, recipes, source snapshots, precision, golden approvals or board registry.
-Only the commands explicitly shown for host execution load/program a device.
-Build commands never run the host.
-
-## Actual delivery status
-
-Eight native/oracle/packing checks pass (12 Python deployment tests also pass): `memory_probe_single`,
-`memory_probe_banked`, `smoke_axi_1ch`, `t01_clock`, `t02_single_read`,
-`t03_read_after_write`, `t04_stream`, `t06_byte_lanes`. The supplied probe RTL
-matches the restricted interface checker, including two-bit banked IDs and
-31-bit compacted addresses. Native and C++ syntax checks are not RTL simulation.
-The suite adapters require verification against actual regenerated interfaces;
-changed/missing ports fail rather than selecting a different architecture.
-
-No new Bambu generation, RTL simulation, vendor package/XO, xclbin,
-implementation timing closure, hw_emu or board test was performed in this
-session. The development Mac has none of these tools. The server was inspected
-read-only at the user's request: no build, script upload, license checkout test,
-IP generation, programming or shell reflash was performed there.
-
-All registered cases are listed by `inventory`; cases outside the eight are
-**not yet implemented** in deployment, rather than declared incompatible.
-Native/minimal-interface variants (including `t10_native_and_axi`) have no bridge
-in this delivery. Floating point and structured MachSuite buffers need explicit
-adapters/oracles before deployment. No performance equivalence is claimed.
-
-The selected integrated toolchain is `ferrandi/PandA-bambu` branch
-`feature/ramulator`, revision `d1975e817a77ac3fe046ccb3adb471e05224ec81`, whose
-Git submodule pins `ferrandi/ramulator2` to
-`9a8ed857455d041524043bc5fb45eb7f07e6a731`. The branch includes production
-MDPI/RTL integration, standalone protocol/clock regressions and CI build rules.
-`toolchain.json` records the examined files and revision selection evidence.
-Ferrandi `main`/tag `2026.11` revision `cda4db2` is also accepted for independent
-hardware generation; it is not selected for Ramulator co-simulation.
-No Jesun build is substituted. The installed candidate observed on the server
-is Jesun and does not establish a built Ferrandi installation.
-
-The Ferrandi driver advances all backends from an external accelerator clock,
-uses a fractional phase accumulator (not per-call integer truncation), and
-reports writes complete on Ramulator acceptance. An AXI B in that co-simulation
-therefore represents acceptance into the timing backend, not full device drain.
-Do not compare that event with physical DRAM-cell visibility. HBM2 presets have
-two pseudochannels per modeled channel; the branch's own 32-pseudochannel
-regression uses 16 modeled channels. No existing preset/golden is changed here.
-
-## Server observations (13 November 2026)
-
-* The installed candidate Bambu reports revision `909639b4b77944d908ca5180ac9f81b3a48a966b`.
-  CMake identifies source `soda-benchmarks/external/candidate-release`, whose
-  remote is Jesun. It is deliberately rejected by the Ferrandi provenance gate.
-* Vivado 2024.2: SW build 5239630; IP build 5239520.
-* Vitis `v++` 2024.2: SW build 5239630; Vitis HLS 2024.2: 5238294.
-  Vitis HLS is not used to synthesize any benchmark.
-* Install prefixes: `/opt/Xilinx/{Vivado,Vitis,Vitis_HLS}/2024.2`, resolving
-  through `/ssd/opt/Xilinx`. These tools were absent from the default SSH PATH.
-* Platforms found: U280 `xilinx_u280_gen3x16_xdma_1_202211_1`, U55C
-  `xilinx_u55c_gen3x16_xdma_3_202210_1`, with hw/hw_emu XSA files.
-  U250 development platform was not found in `/opt/xilinx/platforms`.
-  Presence is not evidence of 2024.2, installed shell or runtime compatibility.
-* XRT `/opt/xilinx/xrt`: 2.14.354, branch 2022.2. Required experimental IP and
-  xclbin APIs are present, including `get_ips/get_args/get_mems/get_index`.
-  Compilation/runtime compatibility with 2024.2 remains unverified.
-* Questa `/opt/mentor/questasim` and `/data2/opt/mentor/questasim` resolve to
-  10.7c (2018.08), outside the 2024.2 supported release matrix.
-* VCS directory `/data2/opt/synopsys/vcs/V-2023.12`. `vcs -ID` failed in its
-  shell launcher; SP1 and a usable license were not established.
-* `hbm_v1_0` and `ddr4_v2_2` IP metadata are installed. HBM model files
-  `HBM_questa.vp`, `HBM_vcs.vp`, `HBM_nc.vp`, `HBM_xsim.sv` exist. Their
-  timing coverage was not established; no proprietary model source is copied.
-* A later metadata scan also found Vivado ML Enterprise **2025.03**, permanent,
-  in `Xilinx.lic`; effective checkout/part entitlement remains untested.
-* `Xilinx.24.lic` names Vivado ML Enterprise with version 2024.05 and permanent
-  expiry. Vivado reports a 2024.11 tool-version limit: entitlement for this
-  release is not proven. `lmstat` reported no SERVER lines (node-locked file);
-  that is not itself proof of an unusable or usable license.
-
-## Clean recursive checkout and selection
-
-The hardware feature branch is committed first; the validation branch then
-inherits that commit and adds only validation files. Consult the delivery report
-for verified commit hashes. The original MachSuite branch and both remote main
-branches remain unchanged. No push or PR is performed.
+After a recursive clone, run from the repository root.
 
 ```bash
-git clone --recursive git@github.com:BENfrost-20/ramulator-examples.git
-cd ramulator-examples
-git switch --detach 363d342
-git switch -c feat/fpga-hardware
-git apply /path/to/hardware.patch  # optional delivery patch, already committed on feature branch
 ./fpga/run.sh inventory --output .fpga/inventory.json
 ./fpga/run.sh native --all-supported --output .fpga/native
-python3 -m unittest discover -s fpga/tests -v
+python3 -B -m unittest discover -s fpga/tests -v
 ```
 
-No selectors defaults to the two calibration cases. `--tests` accepts exact names
-or comma-separated globs, repeatable. `--all-supported` opts into all eight
-adapter candidates, not all registered cases. Every unmatched/unsupported
-requested case raises an error. Each expensive stage handles one prepared DUT;
-there is no default all-bitstreams command.
+With no selectors, the FPGA driver selects the two calibration cases.
+Use --tests for exact names or comma-separated globs and --all-supported
+for all implemented adapters. Package and link each prepared DUT separately.
 
 ## Generate, inspect, package and link
 
@@ -250,8 +162,8 @@ compacted offsets and physical addresses are distinct.
 
 ## Host execution: deliberate later step
 
-The commands below load an xclbin. They were not executed during this session.
-For emulation run from the directory containing generated `emconfig.json`:
+The host loads the selected xclbin. For emulation use the directory containing
+the generated `emconfig.json`.
 
 ```bash
 cd .fpga/prepared/probe-banked/hw_emu
@@ -318,10 +230,8 @@ but explicitly prevent drain until accepted/completed or properly withdrawn.
 It exhibits the old false-idle expression alongside the corrected tracker,
 then checks W-before-AW bursts with backpressure, AW-before-W, delayed/stalled
 B, read bursts, simultaneous new requests and responses, repeated starts,
-separate core/drain counters, response errors and quiescent reset. The old
-control-only bench remains a separate register/counter test. Both are **unrun**
-in this session because no local RTL simulator exists; no server simulation
-was authorized. The commands above fail if a simulator is absent.
+separate core/drain counters, response errors and quiescent reset.
+Run the checks above with Verilator or the corresponding xsim control bench.
 
 The supplied probe top wires `done_port = sig_done`; its library's
 `MinimalAXI4Adapter` drives `M_DataRdy` from R/B handshakes or an internal saved
@@ -330,10 +240,3 @@ Generated Ferrandi core/library identities must pass preparation and the
 actual-DUT functional test before attributing a stronger guarantee to a build.
 The wrapper always preserves the original core-done measurement and reports
 memory-boundary completion separately. Neither is labeled DRAM-cell drain.
-
-Audit exception: the initial `vitis_hls -version` invocation automatically
-updated `/data2/home/pelorosso/vitis_hls.log` at 15:35:44 on 13 November 2026.
-This was an unintended write during the read-only audit. The file was left
-intact; no further server tool execution, build, simulation, upload, installation,
-configuration change or board programming followed. License/model status
-continues to be based on read-only metadata, not a completed tool checkout.
