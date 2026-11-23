@@ -50,6 +50,18 @@
       "ramulator_library_sha256": "903504de26d0f00ea360fc6e724cb54fddf14f08c0db84b70496192f630d3c46",
       "write_response": "ramulator_acceptance"
     },
+    "verilator_ramulator_u55c_1800": {
+      "run": "probe-ramulator-ab.YjGWUn/u55c-retry.S4R2iA",
+      "core_cycles": 10,
+      "drain_cycles": 11,
+      "ar_to_r_cycles": 4,
+      "last_aw_w_to_b_cycles": 1,
+      "dram_ticks_per_axi_cycle": 9,
+      "read_callback_dram_ticks": 19,
+      "ramulator_address": 1073741824,
+      "ramulator_config_sha256": "4b99a7da9915a6aeff7efa09acc7c6d4fe2f0a0f3b7ec57d121eff3ff82488e1",
+      "write_response": "ramulator_acceptance"
+    },
     "vcs_amd_hbm": {
       "run": "probe-vcs.ME2VL9",
       "core_cycles": 73,

@@ -1,0 +1,4 @@
+mode	p50	p90	p95	p99	max
+hardware	26	26	47	59	66
+vcs	38	56	66	75	78
+vcs_shifted_-12	26	44	54	63	66

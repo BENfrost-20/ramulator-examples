@@ -78,6 +78,7 @@ use rising kernel clock edges.
 | Bambu + Ramulator, HBM2 2 Gbps profile | 13 | |
 | Bambu + Ramulator, experimental U55C 1800 MT/s profile | 12 | |
 | Verilator wrapper + Ramulator, HBM2 2 Gbps profile | | 11/12 |
+| Verilator wrapper + Ramulator, experimental U55C 1800 MT/s profile | | 10/11 |
 | VCS + AMD HBM | | 73/74 |
 | Physical U55C, matched original and traced runs | | 49/50 |
 
@@ -85,6 +86,15 @@ The native MDPI read callback takes four kernel cycles using the 2 Gbps
 profile and three using the experimental 1800 MT/s profile. The two profiles
 also differ in clock ratio and geometry. The native runs measure their combined
 effect.
+
+A same-binary replay on Ferrandi changed only the YAML from the 2 Gbps
+profile to the U55C 1800 MT/s profile. Both runs submitted address
+`0x40000000` and took 19 DRAM ticks from acceptance to callback.
+At five and nine DRAM ticks per kernel cycle, the AXI read took five
+and four kernel cycles, respectively. AW/W to B stayed at one cycle.
+The gap to the 49/50-cycle hardware reference increased from 38 to 39
+cycles. This replay leaves the AXI path and write-response modeling as
+separate issues.
 
 For VCS versus the traced U55C, AR to R takes 37 versus 26 cycles. The
 interval from R to the later of AW/W takes 2 versus 5 cycles. The later
@@ -96,3 +106,181 @@ measured 49/50 on the later reservation.
 [Recorded measurements](evidence/probe_n1.json),
 [physical AXI trace](evidence/probe_n1_u55c_axi.jsonl) and
 [U55C trace build and deployment](board_trace/README.md).
+
+### U55C repeated runs on 2026-11-20
+
+On `hacc-u55c-08` (`0000:85:00.1`), ten consecutive host invocations ran
+the same traced image from `probe-board-trace.uqm1l1`. Each invocation
+ran `memory_probe_single` with n=1 and repetition 0 at a 100 MHz kernel
+clock. The [ten-run summary](evidence/probe_n1_u55c_repeat_20261120.tsv)
+preserves each result and the first 12 hexadecimal digits of the
+SHA-256 of its AXI trace.
+
+Seven runs reproduced 49 core and 50 drain cycles. Their trace hash
+prefix matches the [previous AXI trace](evidence/probe_n1_u55c_axi.jsonl).
+Runs 6–8 measured 76/77, 75/76 and 67/68 cycles. AR to R took 53, 52
+and 44 cycles in those runs, compared with 26 in the other seven.
+The increase in AR to R accounts for the entire increase in both
+wrapper counters. The later AW/W to B interval stayed at 15 cycles
+and the W VALID-to-handshake interval stayed at 3 cycles.
+
+The first XRT load call took 6935.8 ms. The other calls took 15.0–16.5 ms
+and included both timing outcomes. XRT load time is outside the wrapper
+counters. The measurements locate the variation between the kernel-side
+read address and response handshakes. Its cause within the shell and
+memory path remains open. The VCS reference is 73/74 cycles, within
+the observed range of 49–76 core and 50–77 drain cycles. The historical
+63/64 result remains a separate observation.
+
+The read-channel events in runs 5–9 separate the time to first valid
+data from the wait for the kernel to accept it. All five requests used
+kernel-side AXI address `0x100` and ID 0.
+
+| Run | AR to RVALID (cycles) | RVALID to R (cycles) |
+| ---: | ---: | ---: |
+| 5 | 26 | 0 |
+| 6 | 53 | 0 |
+| 7 | 52 | 0 |
+| 8 | 44 | 0 |
+| 9 | 26 | 0 |
+
+Each response was accepted on the cycle when it became valid. The
+additional 18–27 cycles accrued before RVALID at the kernel interface.
+The trace covers the path through the shell and HBM together. Its
+timestamps leave refresh and other internal sources of delay unresolved.
+
+The run folder on HACC is
+`$HOME/hacc-probe-history/u55c-08-repeat.elKUUu`. It holds the full per-run
+traces, host logs and comparison reports. The preceding HACC runs were
+archived there as `previous-runs.tar.gz`, with a checksum and file index.
+
+### U55C replication on hacc-u55c-12
+
+On 2026-11-20 the same traced `xclbin`, bank mapping, clock and one-word
+probe were run ten times on `hacc-u55c-12`. Each trace's SHA-256 prefix
+matched the [previous reference trace](evidence/probe_n1_u55c_axi.jsonl).
+The first XRT load call took 7199.7 ms and the following nine took
+14.6–18.5 ms. The FPGA counters stayed at 49 core and 50 drain cycles.
+
+| HACC node | Runs at 49/50 | Core cycle range | AR to R cycle range | Later AW/W to B cycles | W VALID-to-handshake cycles |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `hacc-u55c-08` | 7/10 | 49–76 | 26–53 | 15 | 3 |
+| `hacc-u55c-12` | 10/10 | 49 | 26 | 15 | 3 |
+
+The 49/50 case was reproduced on both nodes. The three longer reads were
+observed on `hacc-u55c-08`. These ten-run series leave the frequency and
+cause of longer reads on each node open.
+[U55C-08 summary](evidence/probe_n1_u55c_repeat_20261120.tsv) ·
+[U55C-12 summary](evidence/probe_n1_u55c_12_repeat_20261120.tsv) ·
+[U55C-12 node record](../hardware/hacc-u55c-12.md)
+
+## Spaced HBM reads on hacc-u55c-08
+
+A separate image issued 1,000 single-beat reads at one address in HBM[0],
+with one read outstanding and variable gaps. The 100 MHz kernel recorded
+each AR and R timestamp. The response channel was ready throughout each
+read response, and RVALID and R share a timestamp for all samples.
+[Per-read timestamps](evidence/spaced_reads_u55c_08.csv) ·
+[Latency histogram](evidence/spaced_reads_u55c_08_histogram.tsv)
+
+Folding AR timestamps modulo 390 kernel cycles (3.9 µs) places all 93
+reads above 26 cycles in phases 262–299. There were 94 requests in that
+window and 906 outside it. Slow responses became valid in phases 325–329.
+The 3.9 µs recurrence matches the base HBM refresh interval documented
+by AMD. This is evidence of a periodic service delay in this acquisition.
+Attribution to refresh requires visibility into controller activity or
+a controlled comparison that changes its refresh schedule.
+[AMD HBM refresh timing](https://docs.amd.com/r/en-US/pg276-axi-hbm/Raw-Throughput-Evaluation)
+
+## Spaced reads in the Ferrandi Ramulator model
+
+The same read generator ran in Verilator against the Ferrandi Ramulator
+library with the 1800 MT/s U55C profile, `AllBank` and nominal tREFI of
+3.9 µs. Each of four initial offsets (0, 97, 195 and 292 kernel cycles)
+completed 1,000 reads. The observed quantiles were identical across
+the four offsets.
+
+| Target | p50 | p90 | p95 | p99 | Maximum |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| HACC U55C hardware | 26 | 26 | 47 | 59 | 66 |
+| Ferrandi Ramulator | 3 | 3 | 3 | 3 | 4 |
+
+Adding 23 cycles to align the medians leaves hardware-minus-model
+residuals of 21 cycles at p95 and 33 cycles at p99, and a maximum
+empirical CDF gap of 10.7 percentage points. These are results for the
+original library and configuration.
+
+In the pinned Ferrandi source, the AllBank manager requests the size of
+the rank level and schedules maintenance inside a loop over those ranks.
+HBM2 has pseudochannels in its organization and the lookup for rank
+returns -1. The loop therefore issues no refresh requests on that source
+path, even with AllBank selected in YAML. A follow-up build needs to emit
+and trace REFab on the addressed channel before using these runs to
+calibrate refresh-related latency.
+[Ferrandi refresh implementation](https://github.com/ferrandi/ramulator2/blob/9a8ed857455d041524043bc5fb45eb7f07e6a731/src/dram_controller/impl/refresh/all_bank_refresh.cpp)
+
+The follow-up build enabled channel-scoped HBM2 refresh and recorded
+issued REFab commands. Each phase again completed 1,000 reads. Channel 0
+issued 1,502–1,503 refresh commands per phase. The [follow-up comparison](evidence/spaced_reads_u55c_ramulator_refresh.tsv)
+records the command counts and quantiles. With refresh enabled, all
+four runs had a median of 4 cycles, p95 of 21–24, p99 of 36–37 and a
+maximum of 38. Adding 22 cycles to align the medians leaves 1–4 cycles
+of hardware-minus-model residual at p95, 0–1 at p99 and 6 at the maximum.
+The maximum empirical CDF gap stays at 10.7 percentage points in every
+phase. These runs reproduce a long read-latency tail. The remaining
+distribution gap and the cause of the median offset need separate
+investigation.
+
+The follow-up results were reported from
+`$HOME/hbm-refresh-check.QDlw6Q/spaced-ramulator.Cpi261` on Ferrandi 1.
+The archived table reproduces the reported quantiles, alignment results
+and REFab counts. The per-read simulator outputs and command logs remain
+in the run directory.
+
+The phase-292 [per-read latency CSV](evidence/spaced_reads_u55c_ramulator_phase292.csv)
+and [channel 0 REFab ticks](evidence/spaced_reads_u55c_ramulator_phase292_refab.tsv)
+were recovered from the Ferrandi output (Verilator 5.052). The
+simulation has 97 reads above its 4-cycle median. The REFab timestamps
+track an interval of 3,511 DRAM ticks (390.11 kernel cycles at a 9:1
+clock ratio). For the phase overlay, each series was folded using its
+own period, the first phase of the long-latency window was aligned
+horizontally, and 22 cycles were added to the simulated latencies.
+The 10.7-point empirical CDF gap in this series occurs at 24 cycles.
+Hardware has 107 reads at 24 cycles and the aligned model starts at
+25 cycles.
+
+## Spaced reads in VCS with the AMD HBM model
+
+The same spaced-read RTL completed the 100-read smoke run and the
+1,000-read measurement in VCS X-2025.06-SP2 with the AMD HBM model and
+the previously validated SmartConnect bridge. The smoke run took
+727.50 seconds of wall time. Both completed CSVs and the comparison
+were reported under `$HOME/hbm-spaced-vcs.TZTRqn/run` on Ferrandi 1.
+[Quantiles reported by Ferrandi](evidence/spaced_reads_u55c_vcs_quantiles.tsv)
+
+In the 1,000-read series, VCS has a median of 38 cycles against 26 on
+hardware. Subtracting 12 cycles aligns the medians and gives equal
+maxima of 66 cycles. The aligned VCS distribution still exceeds the
+hardware by 18 cycles at p90, 7 at p95 and 4 at p99. The raw VCS CSV
+is required to compare slow-read frequencies, phase alignment and
+the full empirical distribution.
+
+The [1,000-read VCS trace](evidence/spaced_reads_u55c_vcs.csv) shows 204
+reads above its 38-cycle median, against 93 above the 26-cycle median on
+hardware and 97 above the 4-cycle median in Ramulator phase 292. Fitting
+the phase concentration of the VCS requests above the median gives
+approximately 194.89 kernel cycles (1.949 µs). Hardware and the corrected
+Ramulator run have a slow window roughly every 390 kernel cycles
+(3.9 µs). Two simulated VCS windows therefore fit within one hardware
+period. Both simulations have RVALID and R on the same cycle for every
+request.
+
+The reference XCI enables temperature compensation of the refresh
+interval via `USER_MC0_REF_TEMP_COMP` and the bench leaves
+`DRAM_0_STAT_TEMP` unobserved. AMD documents a base 3.9 µs period and a
+1.95 µs period with temperature compensation in the higher temperature
+range. The VCS cadence is consistent with the shorter regime. The AMD
+model's refresh configuration and simulated temperature need a
+controlled check to establish the cause.
+[AMD refresh timing](https://docs.amd.com/r/en-US/pg276-axi-hbm/Raw-Throughput-Evaluation) ·
+[Refresh compensation option](https://docs.amd.com/r/en-US/pg276-axi-hbm/Reorder-Refresh-and-Power-Savings-Options-Tab)
