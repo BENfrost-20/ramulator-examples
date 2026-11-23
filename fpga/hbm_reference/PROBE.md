@@ -249,6 +249,32 @@ The 10.7-point empirical CDF gap in this series occurs at 24 cycles.
 Hardware has 107 reads at 24 cycles and the aligned model starts at
 25 cycles.
 
+## Spaced-read replication on hacc-u55c-12
+
+On 2026-11-23, three acquisitions of 1,000 reads each ran on
+`hacc-u55c-12` (user PCI BDF `0000:81:00.1`) using the original
+`hbm-spaced-hacc.tar.gz` bundle. The probe measures AR handshake to
+read response at 100 MHz with the kernel AXI port mapped to HBM[0].
+
+| Node and run | p50 | p95 | p99 | Maximum | Samples above p50 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| hacc-u55c-08 reference | 26 | 47 | 59 | 66 | 93 / 1,000 |
+| hacc-u55c-12 run 1 | 26 | 46 | 59 | 66 | 93 / 1,000 |
+| hacc-u55c-12 run 2 | 26 | 47 | 59 | 66 | 94 / 1,000 |
+| hacc-u55c-12 run 3 | 26 | 49 | 60 | 66 | 116 / 1,000 |
+
+Latencies are in kernel cycles. The 26-cycle median exceeds the
+4-cycle median of the refresh-enabled Ramulator reference (phase 292)
+by 22 cycles (220 ns) on both measured boards. The fraction of reads
+above the median ranged from 9.3% to 11.6% on hacc-u55c-12.
+
+The [summary TSV](evidence/spaced_reads_u55c_12_summary_20261123.tsv)
+transcribes the HACC terminal output. Each archived CSV contains
+1,000 reads and reproduces the corresponding reported statistics.
+[Run 1](evidence/spaced_reads_u55c_12_run1_20261123.csv) ·
+[Run 2](evidence/spaced_reads_u55c_12_run2_20261123.csv) ·
+[Run 3](evidence/spaced_reads_u55c_12_run3_20261123.csv)
+
 ## Spaced reads in VCS with the AMD HBM model
 
 The same spaced-read RTL completed the 100-read smoke run and the
