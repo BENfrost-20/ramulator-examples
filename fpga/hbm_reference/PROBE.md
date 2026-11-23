@@ -180,8 +180,7 @@ A separate image issued 1,000 single-beat reads at one address in HBM[0],
 with one read outstanding and variable gaps. The 100 MHz kernel recorded
 each AR and R timestamp. The response channel was ready throughout each
 read response, and RVALID and R share a timestamp for all samples.
-[Per-read timestamps](evidence/spaced_reads_u55c_08.csv) ·
-[Latency histogram](evidence/spaced_reads_u55c_08_histogram.tsv)
+[Per-read timestamps](evidence/spaced_reads_u55c_08.csv)
 
 Folding AR timestamps modulo 390 kernel cycles (3.9 µs) places all 93
 reads above 26 cycles in phases 262–299. There were 94 requests in that
@@ -282,14 +281,15 @@ The same spaced-read RTL completed the 100-read smoke run and the
 the previously validated SmartConnect bridge. The smoke run took
 727.50 seconds of wall time. Both completed CSVs and the comparison
 were reported under `$HOME/hbm-spaced-vcs.TZTRqn/run` on Ferrandi 1.
-[Quantiles reported by Ferrandi](evidence/spaced_reads_u55c_vcs_quantiles.tsv)
 
-In the 1,000-read series, VCS has a median of 38 cycles against 26 on
-hardware. Subtracting 12 cycles aligns the medians and gives equal
-maxima of 66 cycles. The aligned VCS distribution still exceeds the
-hardware by 18 cycles at p90, 7 at p95 and 4 at p99. The raw VCS CSV
-is required to compare slow-read frequencies, phase alignment and
-the full empirical distribution.
+| Series | p50 | p90 | p95 | p99 | Maximum |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| U55C hardware | 26 | 26 | 47 | 59 | 66 |
+| VCS + AMD HBM | 38 | 56 | 66 | 75 | 78 |
+| VCS latency minus 12 cycles | 26 | 44 | 54 | 63 | 66 |
+
+Quantiles are in kernel cycles. After aligning the medians, VCS
+exceeds the hardware by 18 cycles at p90, 7 at p95 and 4 at p99.
 
 The [1,000-read VCS trace](evidence/spaced_reads_u55c_vcs.csv) shows 204
 reads above its 38-cycle median, against 93 above the 26-cycle median on
