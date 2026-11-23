@@ -38,3 +38,6 @@ obj_dir/
 
 # Site-specific FPGA deployment paths.
 /fpga/deploy.env
+
+# Local handoff notes and working files.
+/.local/
