@@ -33,6 +33,7 @@ configuration. Run a suite directly or use `run_tests.sh` to execute several sui
 | `results/` | Manually approved versioned golden data and collection/comparison scripts |
 | `tools/` | Environment checks, input staging, local execution and golden comparison |
 | [fpga/](fpga/README.md) | Bambu RTL preparation, FPGA builds, VCS reference and HACC deployment |
+| [fpga/hardware/](fpga/hardware/README.md) | Reference cards, HACC nodes, and observed memory and clock configurations |
 | [validation/](validation/README.md) | Experimental memory-model generation and trace analysis |
 
 `run_tests.sh` runs up to `J` cases concurrently within each selected suite.

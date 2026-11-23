@@ -320,6 +320,24 @@ The U55C reference measured 26 cycles in hardware and 4 in its
 Ramulator model. Report the U280 hardware latency separately until the
 corresponding U280 Ramulator reference has been measured.
 
+### U280 HBM measurements on HACC
+
+The same U280 image ran three 1,000-read acquisitions on each of
+`hacc-legacy-01` and `hacc-legacy-02`. The linked image reports a
+100 MHz kernel clock and a 450 MHz `hbm_aclk`. Each run accessed
+`HBM[0]`. The `fpga_kernel.xclbin` SHA-256 recorded in the bundle is
+`c470796422cdff1c68f92fd39c7894138fb64aa63fe39fac6b3044d58040f11c`.
+Latencies are in kernel cycles.
+
+| Node | Run | p50 | p95 | p99 | Maximum | Samples above p50 |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| hacc-legacy-01 | [1](evidence/spaced_reads_u280_hbm_legacy01_run1.csv) | 26 | 35 | 51 | 57 | 74 / 1,000 |
+| hacc-legacy-01 | [2](evidence/spaced_reads_u280_hbm_legacy01_run2.csv) | 26 | 39 | 52 | 57 | 93 / 1,000 |
+| hacc-legacy-01 | [3](evidence/spaced_reads_u280_hbm_legacy01_run3.csv) | 26 | 41 | 52 | 57 | 101 / 1,000 |
+| hacc-legacy-02 | [1](evidence/spaced_reads_u280_hbm_legacy02_run1.csv) | 26 | 40 | 52 | 57 | 100 / 1,000 |
+| hacc-legacy-02 | [2](evidence/spaced_reads_u280_hbm_legacy02_run2.csv) | 26 | 38 | 52 | 57 | 80 / 1,000 |
+| hacc-legacy-02 | [3](evidence/spaced_reads_u280_hbm_legacy02_run3.csv) | 26 | 39 | 52 | 57 | 82 / 1,000 |
+
 ## Spaced reads in VCS with the AMD HBM model
 
 The same spaced-read RTL completed the 100-read smoke run and the

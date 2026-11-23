@@ -2,6 +2,9 @@
 
 Build the FPGA image on `ferrandi-1`. Transfer one archive through the Mac, then compile the small C++ host with the XRT installed on HACC. Stage the download and compile the host before booking an experiment node when the build node has the same XRT installation. Compile the host on the experiment node when it uses a different XRT installation.
 
+See the [hardware and node reference](hardware/README.md) for observed HACC
+shells, platform identifiers, memory maps and clocks.
+
 ## 1. Configure the site paths
 
 On the Mac, copy `fpga/deploy.env.example` to `fpga/deploy.env` and edit the values. Use SSH aliases or `user@host`. Use absolute paths for the two remote artifact directories. The Ferrandi artifact directory must be the directory used for the export in step 2. The HACC artifact directory should be under your shared HACC home so that it is visible from both the build and experiment nodes.
