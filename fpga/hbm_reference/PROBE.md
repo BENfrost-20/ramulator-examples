@@ -274,6 +274,52 @@ transcribes the HACC terminal output. Each archived CSV contains
 [Run 2](evidence/spaced_reads_u55c_12_run2_20261123.csv) ·
 [Run 3](evidence/spaced_reads_u55c_12_run3_20261123.csv)
 
+## Build and run the U280 HBM probe
+
+The U280 build synthesizes the same 1,000-read RTL for the U280 part
+with Vivado and Vitis 2022.2. The link uses a 100 MHz kernel clock,
+`xilinx_u280_gen3x16_xdma_1_202211_1`, and `HBM[0]` for
+`fpga_kernel_1.m_axi_0`.
+
+On Ferrandi 1, start or attach to a tmux session:
+
+    tmux new-session -A -s spaced-u280-hbm
+
+From inside the session:
+
+    cd "$HOME/thesis/ramulator-examples"
+    bash fpga/hbm_reference/spaced_reads/u55c/build.sh u280
+
+Detach with Ctrl+B, then D. Reattach with
+`tmux attach -t spaced-u280-hbm`. The build writes under
+`.fpga/spaced-u280-hbm.*` and prints `HACC_BUNDLE:` after the
+routed timing checks and the image interface UUID and kernel clock
+checks pass. Transfer the reported `hbm-spaced-u280-hacc.tar.gz`
+to the shared HACC home using the [deployment guide](../HACC.md).
+
+On the reserved legacy HACC node, check the current U280 user-function
+BDF and its shell before loading the image:
+
+    source /opt/hdev/cli/enable/xrt
+    xrt_tool=$(command -v xrt-smi || command -v xbutil)
+    "$xrt_tool" examine
+    read -r -p 'U280 user-function PCI BDF: ' bdf
+    "$xrt_tool" examine -d "$bdf" -r platform
+
+For the `xilinx_u280_gen3x16_xdma_base_1` shell, unpack and run the bundle:
+
+    run_dir=$(mktemp -d "$HOME/hacc-u280-spaced.XXXXXX")
+    cd "$run_dir"
+    tar -xzf "$HOME/hbm-spaced-u280-hacc.tar.gz" &&
+      sha256sum -c SHA256SUMS &&
+      python3 -B host-build.py &&
+      env -u XCL_EMULATION_MODE ./host fpga_kernel.xclbin "$bdf" reads-1.csv
+
+The host checks all responses and prints `PASS 1000 AXI reads`.
+The U55C reference measured 26 cycles in hardware and 4 in its
+Ramulator model. Report the U280 hardware latency separately until the
+corresponding U280 Ramulator reference has been measured.
+
 ## Spaced reads in VCS with the AMD HBM model
 
 The same spaced-read RTL completed the 100-read smoke run and the

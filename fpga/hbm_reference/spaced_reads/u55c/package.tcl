@@ -1,7 +1,11 @@
-# Vivado 2024.2: PREPARED PART PERIOD_NS [THREADS]. No device programming.
-lassign $argv prepared part period threads
-if {[llength $argv] ni {3 4} || ![string match 2024.2* [version -short]]} {
- error {Requires Vivado 2024.2 and PREPARED PART PERIOD_NS [THREADS]}
+# PREPARED PART PERIOD_NS [THREADS [RELEASE]]. No device programming.
+lassign $argv prepared part period threads release
+if {[llength $argv] ni {3 4 5}} {
+ error {Expected PREPARED PART PERIOD_NS [THREADS [RELEASE]]}
+}
+if {$release eq {}} {set release 2024.2}
+if {$release ni {2022.2 2024.2} || ![string match ${release}* [version -short]]} {
+ error "Requires Vivado $release"
 }
 if {$threads eq {}} {set threads 8}
 if {![string is integer -strict $threads] || $threads < 1 || $threads > 8} {
