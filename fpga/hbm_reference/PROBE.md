@@ -317,8 +317,7 @@ For the `xilinx_u280_gen3x16_xdma_base_1` shell, unpack and run the bundle:
 
 The host checks all responses and prints `PASS 1000 AXI reads`.
 The U55C reference measured 26 cycles in hardware and 4 in its
-Ramulator model. Report the U280 hardware latency separately until the
-corresponding U280 Ramulator reference has been measured.
+Ramulator model. The U280-specific comparison follows below.
 
 ### U280 HBM measurements on HACC
 
@@ -337,6 +336,46 @@ Latencies are in kernel cycles.
 | hacc-legacy-02 | [1](evidence/spaced_reads_u280_hbm_legacy02_run1.csv) | 26 | 40 | 52 | 57 | 100 / 1,000 |
 | hacc-legacy-02 | [2](evidence/spaced_reads_u280_hbm_legacy02_run2.csv) | 26 | 38 | 52 | 57 | 80 / 1,000 |
 | hacc-legacy-02 | [3](evidence/spaced_reads_u280_hbm_legacy02_run3.csv) | 26 | 39 | 52 | 57 | 82 / 1,000 |
+
+Pooling the six U280 runs and four U55C hardware runs gives p50 of 26
+cycles on both boards. The U280 p95/p99 is 39/52 cycles, compared
+with 47/59 on the U55C. The observed maxima are 57 and 66 cycles,
+respectively. The U280 image was built with Vivado/Vitis 2022.2
+and the U55C images with 2024.2.
+[Hardware latency distributions](evidence/figures/confronto-latenze-u280-u55c-hbm.png)
+
+### U280 Ramulator comparison
+
+All six hardware acquisitions measured a median of 26 kernel cycles.
+Each of the four simulated phases measured 4 cycles. The median gap is
+22 cycles (220 ns at 100 MHz). Across the pooled samples the hardware
+p95/p99/maximum were 39/52/57 cycles. After adding 22 cycles the model
+gave 32/48/51. The simulations issued 1,499–1,500 channel-0 REFab commands
+per phase with the [U280 configuration](spaced_reads/ramulator/hbm2_u280_1800.yaml).
+
+[Latency distributions](evidence/figures/u280-distribuzione-latenze.png) ·
+[Aligned latency tail](evidence/figures/u280-coda-latenze.png) ·
+[Per-run comparisons](evidence/spaced_reads_u280_ramulator_comparison.txt)
+
+### Matched 2022.2 bitstream builds
+
+The [tmux launcher](spaced_reads/campaign-2022.2/campaign.sh) builds U280
+DDR[0], U250 DDR[0] and U55C HBM[0] with a 100 MHz kernel. To reproduce
+the launch layout, set `campaign` to a fresh directory directly under
+the successful U280 HBM build. From the repository root run:
+
+```bash
+mkdir -p "$campaign/src"
+src=fpga/hbm_reference/spaced_reads
+cp "$src/campaign-2022.2/campaign.sh" "$campaign/"
+cp "$src/u55c/"{fpga_kernel.sv,control.sv,registers.tcl,package.tcl,check_implementation.tcl,host.cpp,host-build.py,host-flags.json} "$campaign/src/"
+git rev-parse HEAD > "$campaign/source-revision.txt"
+bash "$campaign/campaign.sh" start
+```
+
+The original campaign used RTL from revision 365c5c6. U280 reuses the HBM
+kernel XO and IP cache and runs a new DDR link. Each target writes its
+own logs and routed timing checks before creating a HACC bundle.
 
 ## Spaced reads in VCS with the AMD HBM model
 

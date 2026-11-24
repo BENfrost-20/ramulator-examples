@@ -1,0 +1,55 @@
+# U280 geometry and nominal rate for a 100 MHz accelerator.
+# Command cycle counts are inherited from Ferrandi's HBM2_2Gbps preset.
+# They are model assumptions, pending calibration against the board trace.
+Frontend:
+  impl: GEM5
+
+MemorySystem:
+  impl: GenericDRAM
+  clock_ratio: 9
+
+  DRAM:
+    impl: HBM2
+    org:
+      preset: HBM2_4Gb
+      density: 4096  # Mibit per channel.
+      channel: 16   # Two pseudochannels per channel; 32 pseudochannels total.
+      channel_width: 128  # Mapper uses two prefetch beats for a 32-byte unit.
+    timing:
+      rate: 1800
+      nBL: 4
+      nCL: 7
+      nRCDRD: 7
+      nRCDWR: 7
+      nRP: 7
+      nRAS: 17
+      nRC: 19
+      nWR: 8
+      nRTPS: 2
+      nRTPL: 3
+      nCWL: 2
+      nCCDS: 1
+      nCCDL: 2
+      nRRDS: 2
+      nRRDL: 3
+      nWTRS: 3
+      nWTRL: 4
+      nRTW: 3
+      nFAW: 15
+      # All-bank nRFC is derived from density; nREFISB is set by the model.
+      nRFCSB: 160
+      tREFI: 3900.0
+      nRREFD: 8
+
+  Controller:
+    impl: Generic
+    Scheduler:
+      impl: FRFCFS
+    RefreshManager:
+      impl: AllBank
+    RowPolicy:
+      impl: OpenRowPolicy
+
+  # Retain the experimental interleaving while varying the HBM profile.
+  AddrMapper:
+    impl: RoBaRaCoCh
