@@ -377,6 +377,25 @@ The original campaign used RTL from revision 365c5c6. U280 reuses the HBM
 kernel XO and IP cache and runs a new DDR link. Each target writes its
 own logs and routed timing checks before creating a HACC bundle.
 
+### U280 DDR4 Ramulator comparison
+
+The Vivado 2022.2 `DDR[0]` XCI defines the
+[DDR4 profile](spaced_reads/ramulator/u280_ddr4_2022_2.yaml), with a
+single rank of 8 Gbit ×4 devices, DDR4-2400, `nRFC=421` and
+`nREFI=9363`. The generic Ramulator scheduler and address mapper are
+approximations of the hardware controller.
+
+The four simulation traces contain 1,000 reads each:
+[phase 0](evidence/spaced_reads_u280_ddr_ramulator_xci_phase0.csv),
+[phase 97](evidence/spaced_reads_u280_ddr_ramulator_xci_phase97.csv),
+[phase 195](evidence/spaced_reads_u280_ddr_ramulator_xci_phase195.csv)
+and [phase 292](evidence/spaced_reads_u280_ddr_ramulator_xci_phase292.csv).
+The three hardware runs on `hacc-legacy-01` gave a median of 28 kernel
+cycles. Each simulated phase gave 5 cycles, for a gap of 23 cycles
+(230 ns at 100 MHz). The [aligned latency figure](evidence/figures/u280-ddr-hw-vs-ramulator-plus23.png)
+overlays hardware and Ramulator after adding 23 cycles to the simulated
+latencies. The pooled p99 is 62 cycles in hardware and 52 in the aligned model.
+
 ## Spaced reads in VCS with the AMD HBM model
 
 The same spaced-read RTL completed the 100-read smoke run and the

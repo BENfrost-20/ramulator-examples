@@ -1,0 +1,49 @@
+# U280 DDR[0], Vivado 2022.2, bd_b35e_ddr4_mem00_0.xci.
+# Micron MTA18ASF2G72PZ-2G3. 64 payload bits plus 8 ECC bits on the board.
+Frontend:
+  impl: GEM5
+
+MemorySystem:
+  impl: GenericDRAM
+  clock_ratio: 12
+
+  DRAM:
+    impl: DDR4
+    org:
+      preset: DDR4_8Gb_x4
+      channel: 1
+      rank: 1
+      channel_width: 64
+    timing:
+      preset: DDR4_2400U
+      # BL8 occupies four DRAM clocks. nRC = tRAS + tRP.
+      nBL: 4
+      nRC: 56
+      nCL: 17
+      nCWL: 12
+      nRAS: 39
+      nRCD: 17
+      nRP: 17
+      nWR: 19
+      nRTP: 10
+      nRRDS: 4
+      nRRDL: 6
+      nWTRS: 4
+      nWTRL: 10
+      nFAW: 16
+      nRFC: 421
+      nREFI: 9363
+
+  Controller:
+    impl: Generic
+    Scheduler:
+      impl: FRFCFS
+    RefreshManager:
+      impl: AllBank
+    RowPolicy:
+      # Approximation: AutoPrecharge=false in the XCI.
+      impl: OpenRowPolicy
+
+  # Generic mapper for the single-address probe; hardware uses ROW_COLUMN_BANK_INTLV.
+  AddrMapper:
+    impl: RoBaRaCoCh
