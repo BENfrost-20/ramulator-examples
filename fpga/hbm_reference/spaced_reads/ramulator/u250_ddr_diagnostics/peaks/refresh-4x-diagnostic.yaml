@@ -1,0 +1,43 @@
+# Sensitivity test: artificial refresh interval; not the U250 XCI setting.
+# Source: U250 DDR[0] implemented controller, link-fixed100-20261125-123114, bd_b35e_ddr4_mem00_0.xci.
+# Module: MTA18ASF2G72PZ-2G3. Payload bus excludes ECC bits.
+Frontend:
+  impl: GEM5
+MemorySystem:
+  impl: GenericDRAM
+  clock_ratio: 12
+  DRAM:
+    impl: DDR4
+    org:
+      preset: DDR4_8Gb_x4
+      channel: 1
+      rank: 1
+      channel_width: 64
+    timing:
+      preset: DDR4_2400U
+      nBL: 4
+      nCL: 17
+      nCWL: 12
+      nRC: 56
+      nRAS: 39
+      nRCD: 17
+      nRP: 17
+      nWR: 19
+      nRTP: 10
+      nRRDS: 4
+      nRRDL: 6
+      nWTRS: 4
+      nWTRL: 10
+      nFAW: 16
+      nRFC: 421
+      nREFI: 37452
+  Controller:
+    impl: Generic
+    Scheduler:
+      impl: FRFCFS
+    RefreshManager:
+      impl: AllBank
+    RowPolicy:
+      impl: OpenRowPolicy
+  AddrMapper:
+    impl: RoBaRaCoCh

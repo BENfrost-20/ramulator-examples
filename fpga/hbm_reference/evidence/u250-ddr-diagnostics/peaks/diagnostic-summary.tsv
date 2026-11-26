@@ -1,0 +1,17 @@
+profile	phase	samples	pct_at_28	pct_at_30	pct_above_45	p50_cycles	p99_cycles
+hardware	pooled	3000	83.77	9.17	3.60	28	63
+xci	0	1000	32.50	63.60	2.20	30	49
+xci	97	1000	32.50	64.20	1.80	30	49
+xci	195	1000	32.40	63.30	2.30	30	57
+xci	292	1000	32.40	63.60	2.10	30	56
+xci	pooled	4000	32.45	63.67	2.10	30	54
+refresh-2x-diagnostic	0	1000	63.60	34.80	0.80	28	41
+refresh-2x-diagnostic	97	1000	63.60	34.50	1.20	28	49
+refresh-2x-diagnostic	195	1000	63.60	34.20	1.60	28	53
+refresh-2x-diagnostic	292	1000	63.60	34.70	1.20	28	49
+refresh-2x-diagnostic	pooled	4000	63.60	34.55	1.20	28	49
+refresh-4x-diagnostic	0	1000	81.80	17.10	0.70	28	31
+refresh-4x-diagnostic	97	1000	81.80	17.00	0.80	28	39
+refresh-4x-diagnostic	195	1000	81.80	17.00	0.40	28	32
+refresh-4x-diagnostic	292	1000	81.80	17.00	0.70	28	33
+refresh-4x-diagnostic	pooled	4000	81.80	17.02	0.65	28	33

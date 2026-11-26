@@ -396,6 +396,41 @@ cycles. Each simulated phase gave 5 cycles, for a gap of 23 cycles
 overlays hardware and Ramulator after adding 23 cycles to the simulated
 latencies. The pooled p99 is 62 cycles in hardware and 52 in the aligned model.
 
+### U250 DDR4 Ramulator comparison
+
+The U250 DDR[0] bitstream used a fixed 100 MHz kernel clock. Three
+hardware captures on `hacc-legacy-02` and four simulated phases contain
+1,000 reads each. The [U250 XCI profile](spaced_reads/ramulator/u250_ddr4_2022_2.yaml)
+uses the same DRAM geometry and timing values as the U280 DDR4 profile.
+The comparison pools samples within each series. Values are kernel cycles.
+
+| Series | p50 | p90 | p95 | p99 | Maximum |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| U250 hardware | 28 | 30 | 34 | 63 | 72 |
+| Ramulator | 5 | 5 | 5 | 29 | 41 |
+| Ramulator +23 cycles | 28 | 28 | 28 | 52 | 64 |
+
+[Aligned latency figure](evidence/figures/u250-ddr-hw-vs-ramulator-plus23.png) ·
+[Per-run comparison](evidence/spaced_reads_u250_ddr_ramulator_comparison.tsv)
+
+[U250 replay and diagnostic sources](spaced_reads/ramulator/u250_ddr_diagnostics/README.md)
+and [diagnostic evidence](evidence/u250-ddr-diagnostics/README.md) record
+the command trace and refresh-interval sensitivity runs.
+
+### Additional U280 HBM runs on legacy-01
+
+Three additional 2022.2 acquisitions on 2026-11-24 are available
+[run 1](evidence/spaced_reads_u280_hbm_legacy01_run1_20261124.csv),
+[run 2](evidence/spaced_reads_u280_hbm_legacy01_run2_20261124.csv) and
+[run 3](evidence/spaced_reads_u280_hbm_legacy01_run3_20261124.csv).
+
+### U280 DDR4 row locality
+
+The [probe sources](spaced_reads/u280_ddr_controller/README.md) implement
+three matched address patterns with one outstanding AXI read. The
+[local Ramulator CSVs](evidence/u280-ddr-row-locality/README.md) record
+four refresh offsets per pattern. The corresponding HACC run is pending.
+
 ## Spaced reads in VCS with the AMD HBM model
 
 The same spaced-read RTL completed the 100-read smoke run and the

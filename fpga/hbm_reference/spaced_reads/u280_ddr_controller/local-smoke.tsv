@@ -1,0 +1,13 @@
+phase	case	samples_after_first	p50	p95	p99	max	p50_minus_same_row	ACT	PRE	PREA	RD	REFab
+0	same-row	999	3	5	35	41	0	58	0	58	1000	78
+0	same-bank	999	6	6	33	41	3	1000	941	59	1000	82
+0	different-bank	999	3	5	37	41	0	116	0	58	1000	79
+195	same-row	999	3	5	35	40	0	58	0	58	1000	79
+195	same-bank	999	6	6	33	41	3	1000	940	60	1000	82
+195	different-bank	999	3	5	33	41	0	116	0	58	1000	79
+390	same-row	999	3	5	33	40	0	58	0	58	1000	79
+390	same-bank	999	6	6	34	41	3	1000	940	60	1000	83
+390	different-bank	999	3	5	33	38	0	116	0	58	1000	79
+585	same-row	999	3	5	32	41	0	58	0	58	1000	79
+585	same-bank	999	6	6	31	41	3	1000	940	60	1000	83
+585	different-bank	999	3	5	37	41	0	117	0	59	1000	79

@@ -1,0 +1,6 @@
+phase	reads_3c	3c_with_ACT	reads_5c	5c_with_ACT	REFab	min_REFab_to_ACT_ticks
+0	325	0	636	636	750	421
+97	325	0	642	642	750	421
+195	324	0	633	633	750	421
+292	324	0	636	636	750	421
+pooled	1298	0	2547	2547	-	421
