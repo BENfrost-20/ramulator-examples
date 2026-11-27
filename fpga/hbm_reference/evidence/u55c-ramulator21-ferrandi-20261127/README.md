@@ -6,9 +6,17 @@ to R at 100 MHz. RVALID and R coincide for every archived read. The hardware
 reference is the [U55C-08 acquisition on HBM[0]](../spaced_reads_u55c_08.csv).
 
 The Ramulator 2.0 and 2.1 runs used identical `fpga_kernel.sv` and `control.sv`
-as verified by SHA-256. Each used warm-up lengths of 0, 97, 195 and 292 kernel
-cycles. The warm-up lengths identify replay runs. The absolute phase inside the
-DRAM refresh period can differ between simulator versions.
+as verified by SHA-256.
+
+## Warm-up
+
+After reset and AXI-Lite setup, the testbench waits 0, 97, 195 or 292 extra
+kernel cycles before starting the probe. The DRAM model keeps ticking during
+this idle period. Varying the wait moves the first measured read relative
+to the roughly 3.9 µs refresh schedule. The wait is outside the read
+latency measurement. Warm-up 0 starts the probe immediately after setup.
+The same wait length can have a different absolute refresh phase in each
+simulator configuration.
 
 | Series | Source and configuration |
 | --- | --- |
@@ -30,14 +38,29 @@ revision, timing parameters, or refresh scope.
 | Ramulator 2.1, 1800 MT/s | 5 | 6 | 23 | 38 | 41 | +21 |
 | Ramulator 2.1, 2000 MT/s | 5 | 7 | 24 | 38 | 41 | +21 |
 
-Values are kernel cycles. The maximum empirical cumulative distribution gap
-after median alignment is 10.7 percentage points for 2.0 at each warm-up,
-2.5–3.2 for 2.1 at 1800 MT/s, and 2.3–3.2 for 2.1 at 2000 MT/s.
-The P99 residual is identical for all model configurations at each warm-up.
-The P95 residual at 1800 MT/s in phase 292 increases from one to three cycles.
-The unshifted median still differs from hardware by 21 cycles with 2.1.
+Values are kernel cycles. At 1800 MT/s, Ramulator 2.1 reduces the maximum
+median-aligned CDF gap from 10.7 to 2.5–3.2 percentage points across the four
+warm-ups. The 2000 MT/s profile yields 2.3–3.2 percentage points. The 2.1
+median remains 21 cycles (210 ns) below hardware before alignment. The
+aligned P99 error is unchanged across configurations at each warm-up. At
+warm-up 292 the aligned P95 error increases from one to three cycles when
+moving from 2.0 to 2.1 at 1800 MT/s.
+
 All eight 2.1 runs logged 1,000 read commands on channel 0, pseudochannel 0.
 The median refresh interval there was about 3.9 µs for both data rates.
+
+## Reading the figures
+
+- **Latency distributions.** The vertical axis gives the share of reads
+  completed by each latency threshold. The left panel shows measured and
+  simulated latencies. The right panel shifts each simulated trace by its
+  median difference relative to hardware, exposing differences in distribution shape.
+- **Latency quantiles.** The bars show the original P50, P90, P95, P99 and
+  maximum at warm-up 292.
+- **Warm-up sensitivity.** The left panel shows the largest vertical gap
+  between each aligned CDF and the hardware CDF. The other panels show
+  hardware minus aligned simulation at P95 and P99. Positive values indicate
+  that the simulator underestimates hardware latency at that percentile.
 
 ## Archive and figures
 
