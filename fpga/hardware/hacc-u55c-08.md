@@ -63,7 +63,7 @@ kernel-side handshakes.
 The default [Bambu board profile](../../boards.json) targets 3.33 ns and uses
 the [shared HBM2 YAML](../../smoke/configs/hbm2_32ch.yaml). The recorded
 four-way comparison uses a 10 ns kernel period. The additional
-[U55C 1800 MT/s YAML](../../smoke/configs/hbm2_u55c_1800.yaml) is an
+[U55C 1800 MT/s YAML](../hbm_reference/evidence/u55c-ramulator21-ferrandi-20261127/ramulator-2.0/hbm2_u55c_1800.yaml) is an
 experimental modeling input. The resident-shell report and traced image
 metadata leave the physical DRAM transfer rate and controller timings
 unverified. Keep those values labeled as model parameters for the simulation.

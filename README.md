@@ -86,11 +86,12 @@ with the toolchain recorded by each experiment. The original Jesun repositories 
 under credits are source history. GAPBS, MachSuite and PolyBenchC are
 benchmark source dependencies and are separate from the simulator.
 
-### Ferrandi U55C replay
+### Ferrandi memory replay and results
 
 Use the [U55C 1,000-read replay](fpga/hbm_reference/spaced_reads/ramulator/ramulator21/README.md)
 to build the pinned library with an existing Ferrandi toolchain and compare at
-1800 and 2000 MT/s against hardware and Ramulator 2.0. The setup accepts
+1800 and 2000 MT/s against hardware and Ramulator 2.0. See the [Alveo memory latency report](fpga/hbm_reference/evidence/alveo-ramulator21-ferrandi-20261127/README.md)
+for the four tested board and memory combinations. The setup accepts
 `PYTHON3` to select an interpreter when the host default is older than 3.10.
 
 ### Build on Linux x86-64

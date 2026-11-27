@@ -24,6 +24,6 @@ for phase in 0 97 195 292; do
 done
 for hw in "$evidence"/spaced_reads_u250_ddr_legacy02_run{1,2,3}_20261125.csv; do
   basename "$hw"
-  python3 "$src/compare.py" "$hw" "$out"
+  python3 "$src/../../compare.py" "$hw" "$out"
 done | tee "$out/comparison.tsv"
 printf 'RESULTS: %s\n' "$out"

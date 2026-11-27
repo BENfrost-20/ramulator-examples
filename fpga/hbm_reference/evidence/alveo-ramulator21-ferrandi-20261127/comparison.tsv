@@ -1,0 +1,49 @@
+board	series	warmup_cycles	reads	p50	p90	p95	p99	max	median_shift_cycles	max_cdf_gap_pp	residual_p95_cycles	residual_p99_cycles
+u55c-hbm2	hardware	-	1000	26	26	47	59	66	-	-	-	-
+u55c-hbm2	Ramulator 2.0 · 1800 MT/s	0	1000	4	4	22	36	38	22	10.700	3	1
+u55c-hbm2	Ramulator 2.1 · 1800 MT/s	0	1000	5	5	23	37	41	21	2.500	3	1
+u55c-hbm2	Ramulator 2.1 · 2000 MT/s	0	1000	5	6	23	37	41	21	2.300	3	1
+u55c-hbm2	Ramulator 2.0 · 1800 MT/s	97	1000	4	4	22	36	38	22	10.700	3	1
+u55c-hbm2	Ramulator 2.1 · 1800 MT/s	97	1000	5	6	22	37	40	21	3.000	4	1
+u55c-hbm2	Ramulator 2.1 · 2000 MT/s	97	1000	5	7	23	37	41	21	3.000	3	1
+u55c-hbm2	Ramulator 2.0 · 1800 MT/s	195	1000	4	4	21	36	38	22	10.700	4	1
+u55c-hbm2	Ramulator 2.1 · 1800 MT/s	195	1000	5	5	21	37	40	21	3.200	5	1
+u55c-hbm2	Ramulator 2.1 · 2000 MT/s	195	1000	5	5	20	37	41	21	3.200	6	1
+u55c-hbm2	Ramulator 2.0 · 1800 MT/s	292	1000	4	4	24	37	38	22	10.700	1	0
+u55c-hbm2	Ramulator 2.1 · 1800 MT/s	292	1000	5	6	23	38	41	21	2.500	3	0
+u55c-hbm2	Ramulator 2.1 · 2000 MT/s	292	1000	5	7	24	38	41	21	2.300	2	0
+u280-hbm2	hardware	-	9000	26	26	39	52	57	-	-	-	-
+u280-hbm2	Ramulator 2.0 · 1800 MT/s	0	1000	4	4	12	26	29	22	6.222	5	4
+u280-hbm2	Ramulator 2.1 · 1800 MT/s	0	1000	5	5	15	30	32	21	7.378	3	1
+u280-hbm2	Ramulator 2.1 · 2000 MT/s	0	1000	5	5	15	27	32	21	7.078	3	4
+u280-hbm2	Ramulator 2.0 · 1800 MT/s	97	1000	4	4	7	25	29	22	6.222	10	5
+u280-hbm2	Ramulator 2.1 · 1800 MT/s	97	1000	5	5	13	29	31	21	8.078	5	2
+u280-hbm2	Ramulator 2.1 · 2000 MT/s	97	1000	5	5	14	25	31	21	7.878	4	6
+u280-hbm2	Ramulator 2.0 · 1800 MT/s	195	1000	4	4	8	26	29	22	6.222	9	4
+u280-hbm2	Ramulator 2.1 · 1800 MT/s	195	1000	5	5	12	28	31	21	8.278	6	3
+u280-hbm2	Ramulator 2.1 · 2000 MT/s	195	1000	5	5	12	25	31	21	8.078	6	6
+u280-hbm2	Ramulator 2.0 · 1800 MT/s	292	1000	4	4	13	26	29	22	6.222	4	4
+u280-hbm2	Ramulator 2.1 · 1800 MT/s	292	1000	5	5	12	26	32	21	7.278	6	5
+u280-hbm2	Ramulator 2.1 · 2000 MT/s	292	1000	5	5	11	26	31	21	7.878	7	5
+u280-ddr4	hardware	-	3000	28	30	32	62	72	-	-	-	-
+u280-ddr4	Ramulator 2.0 · 2400 MT/s XCI	0	1000	5	5	5	24	38	23	32.500	4	15
+u280-ddr4	Ramulator 2.1 · 2400 MT/s XCI	0	1000	5	5	5	33	41	23	32.900	4	6
+u280-ddr4	Ramulator 2.0 · 2400 MT/s XCI	97	1000	5	5	5	24	38	23	32.500	4	15
+u280-ddr4	Ramulator 2.1 · 2400 MT/s XCI	97	1000	5	5	5	31	41	23	32.900	4	8
+u280-ddr4	Ramulator 2.0 · 2400 MT/s XCI	195	1000	5	5	5	32	41	23	32.400	4	7
+u280-ddr4	Ramulator 2.1 · 2400 MT/s XCI	195	1000	5	5	8	34	41	23	32.300	1	5
+u280-ddr4	Ramulator 2.0 · 2400 MT/s XCI	292	1000	5	5	5	31	40	23	32.400	4	8
+u280-ddr4	Ramulator 2.1 · 2400 MT/s XCI	292	1000	5	5	5	31	40	23	32.200	4	8
+u250-ddr4	hardware	-	3000	28	30	34	63	72	-	-	-	-
+u250-ddr4	Ramulator 2.0 · 2400 MT/s XCI	0	1000	5	5	5	24	38	23	32.500	6	16
+u250-ddr4	Ramulator 2.1 · 2400 MT/s XCI	0	1000	5	5	5	33	41	23	32.900	6	7
+u250-ddr4	Ramulator 2.1 · 2400 MT/s Bambu	0	1000	5	5	11	52	58	23	34.600	0	-12
+u250-ddr4	Ramulator 2.0 · 2400 MT/s XCI	97	1000	5	5	5	24	38	23	32.500	6	16
+u250-ddr4	Ramulator 2.1 · 2400 MT/s XCI	97	1000	5	5	5	31	41	23	32.900	6	9
+u250-ddr4	Ramulator 2.1 · 2400 MT/s Bambu	97	1000	5	5	8	52	58	23	34.600	3	-12
+u250-ddr4	Ramulator 2.0 · 2400 MT/s XCI	195	1000	5	5	5	32	41	23	32.400	6	8
+u250-ddr4	Ramulator 2.1 · 2400 MT/s XCI	195	1000	5	5	8	34	41	23	32.300	3	6
+u250-ddr4	Ramulator 2.1 · 2400 MT/s Bambu	195	1000	5	5	19	54	61	23	33.000	-8	-14
+u250-ddr4	Ramulator 2.0 · 2400 MT/s XCI	292	1000	5	5	5	31	40	23	32.400	6	9
+u250-ddr4	Ramulator 2.1 · 2400 MT/s XCI	292	1000	5	5	5	31	40	23	32.200	6	9
+u250-ddr4	Ramulator 2.1 · 2400 MT/s Bambu	292	1000	5	5	14	53	61	23	32.900	-3	-13

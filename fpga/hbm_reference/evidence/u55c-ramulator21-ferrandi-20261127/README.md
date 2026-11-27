@@ -29,53 +29,21 @@ calibration is outside this experiment. These measurements compare complete
 model configurations. They do not isolate the effects of the simulator
 revision, timing parameters, or refresh scope.
 
-## Results
+## Evidence files
 
-| Series, warm-up 292 | P50 | P90 | P95 | P99 | Maximum | Median shift used for alignment |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| U55C hardware | 26 | 26 | 47 | 59 | 66 | — |
-| Ramulator 2.0, 1800 MT/s | 4 | 4 | 24 | 37 | 38 | +22 |
-| Ramulator 2.1, 1800 MT/s | 5 | 6 | 23 | 38 | 41 | +21 |
-| Ramulator 2.1, 2000 MT/s | 5 | 7 | 24 | 38 | 41 | +21 |
+- The effective Ramulator 2.1 profiles are the
+  [1800 MT/s profile](../../spaced_reads/ramulator/ramulator21/profiles/matched-rate-1800.yaml)
+  and the [2000 MT/s profile](../../spaced_reads/ramulator/ramulator21/profiles/bambu-2000.yaml).
+  Their original hashes are recorded in the
+  [Ferrandi manifest](ramulator-2.1/provenance.txt).
+- The versioned directories contain the original latency CSVs. The
+  [2.0 phase-292 CSV](../spaced_reads_u55c_ramulator_phase292.csv) is shared
+  with the historical evidence. The [refresh cadence](ramulator-2.1/refresh-cadence.tsv)
+  records the command counts and intervals from the eight 2.1 replays.
+- `diagnostics.tar.gz` contains both versions' AXI traces and phase logs,
+  plus the 2.0 build log and the 2.1 per-channel command traces.
+  `ramulator-2.1/verilator-build.log.gz` captures the 2.1 Verilator build.
+  Run `sha256sum -c SHA256SUMS` from this directory to verify the archive.
 
-Values are kernel cycles. At 1800 MT/s, Ramulator 2.1 reduces the maximum
-median-aligned CDF gap from 10.7 to 2.5–3.2 percentage points across the four
-warm-ups. The 2000 MT/s profile yields 2.3–3.2 percentage points. The 2.1
-median remains 21 cycles (210 ns) below hardware before alignment. The
-aligned P99 error is unchanged across configurations at each warm-up. At
-warm-up 292 the aligned P95 error increases from one to three cycles when
-moving from 2.0 to 2.1 at 1800 MT/s.
-
-All eight 2.1 runs logged 1,000 read commands on channel 0, pseudochannel 0.
-The median refresh interval there was about 3.9 µs for both data rates.
-
-## Reading the figures
-
-- **Latency distributions.** The vertical axis gives the share of reads
-  completed by each latency threshold. The left panel shows measured and
-  simulated latencies. The right panel shifts each simulated trace by its
-  median difference relative to hardware, exposing differences in distribution shape.
-- **Latency quantiles.** The bars show the original P50, P90, P95, P99 and
-  maximum at warm-up 292.
-- **Warm-up sensitivity.** The left panel shows the largest vertical gap
-  between each aligned CDF and the hardware CDF. The other panels show
-  hardware minus aligned simulation at P95 and P99. Positive values indicate
-  that the simulator underestimates hardware latency at that percentile.
-
-## Archive and figures
-
-- The versioned subdirectories retain original CSVs, effective YAMLs and
-  server summaries. `ramulator-2.1/provenance.txt` identifies the pinned
-  dependency and fingerprints the library and replay inputs.
-- `diagnostics.tar.gz` contains the original AXI traces and phase logs for
-  both versions, the 2.0 build log and all 2.1 per-channel command traces.
-  The 2.1 Verilator build log is archived separately. The 12,000 simulated
-  read latencies were cross-checked against the AXI events.
-- The three figures are available as PNG and SVG. Run `python3 plot.py`
-  with Matplotlib from this directory. The script validates the original
-  CSVs against the server summaries and regenerates the figures.
-- Run `sha256sum -c SHA256SUMS` from this directory to verify the archive.
-
-[Latency distributions](figures/u55c-latency-cdf.svg) ·
-[Latency quantiles](figures/u55c-latency-quantiles.svg) ·
-[Warm-up sensitivity](figures/u55c-warm-up-sensitivity.svg)
+Comparative statistics, interpretation and all figures are in the
+[Alveo memory latency report](../alveo-ramulator21-ferrandi-20261127/README.md).

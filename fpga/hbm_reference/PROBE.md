@@ -199,6 +199,10 @@ the native 1800 and 2000 MT/s profiles and compares against the recorded
 hardware and Ramulator 2.0 traces. The [27 November 2026 Ferrandi archive](evidence/u55c-ramulator21-ferrandi-20261127/README.md) contains the raw reads,
 effective profiles, diagnostics and English comparison figures.
 
+The [Alveo memory latency report](evidence/alveo-ramulator21-ferrandi-20261127/README.md)
+brings together U55C HBM2, U280 HBM2, U280 DDR4 and U250 DDR4 in one comparison
+of the hardware captures and matched Ramulator 2.0 and 2.1 replays.
+
 ## Historical Ferrandi Ramulator 2.0 results
 
 The same read generator ran in Verilator against the Ferrandi Ramulator
@@ -350,20 +354,15 @@ cycles on both boards. The U280 p95/p99 is 39/52 cycles, compared
 with 47/59 on the U55C. The observed maxima are 57 and 66 cycles,
 respectively. The U280 image was built with Vivado/Vitis 2022.2
 and the U55C images with 2024.2.
-[Hardware latency distributions](evidence/figures/confronto-latenze-u280-u55c-hbm.png)
+[Hardware capture statistics](evidence/alveo-ramulator21-ferrandi-20261127/hardware-replicates.tsv)
 
-### U280 Ramulator comparison
+### U280 HBM2 simulation
 
-All six hardware acquisitions measured a median of 26 kernel cycles.
-Each of the four simulated phases measured 4 cycles. The median gap is
-22 cycles (220 ns at 100 MHz). Across the pooled samples the hardware
-p95/p99/maximum were 39/52/57 cycles. After adding 22 cycles the model
-gave 32/48/51. The simulations issued 1,499–1,500 channel-0 REFab commands
-per phase with the [U280 configuration](spaced_reads/ramulator/hbm2_u280_1800.yaml).
-
-[Latency distributions](evidence/figures/u280-distribuzione-latenze.png) ·
-[Aligned latency tail](evidence/figures/u280-coda-latenze.png) ·
-[Per-run comparisons](evidence/spaced_reads_u280_ramulator_comparison.txt)
+The historical [U280 configuration](spaced_reads/ramulator/hbm2_u280_1800.yaml)
+used 1800 MT/s and channel-scoped refresh. The four baseline phases issued
+1,499–1,500 channel-0 REFab commands per phase. The
+[Alveo comparison](evidence/alveo-ramulator21-ferrandi-20261127/README.md)
+includes the full distribution and updated reference pool.
 
 ### Matched 2022.2 bitstream builds
 
@@ -385,44 +384,23 @@ The original campaign used RTL from revision 365c5c6. U280 reuses the HBM
 kernel XO and IP cache and runs a new DDR link. Each target writes its
 own logs and routed timing checks before creating a HACC bundle.
 
-### U280 DDR4 Ramulator comparison
+### U280 and U250 DDR4 simulation
 
-The Vivado 2022.2 `DDR[0]` XCI defines the
-[DDR4 profile](spaced_reads/ramulator/u280_ddr4_2022_2.yaml), with a
-single rank of 8 Gbit ×4 devices, DDR4-2400, `nRFC=421` and
-`nREFI=9363`. The generic Ramulator scheduler and address mapper are
-approximations of the hardware controller.
-
-The four simulation traces contain 1,000 reads each:
-[phase 0](evidence/spaced_reads_u280_ddr_ramulator_xci_phase0.csv),
-[phase 97](evidence/spaced_reads_u280_ddr_ramulator_xci_phase97.csv),
-[phase 195](evidence/spaced_reads_u280_ddr_ramulator_xci_phase195.csv)
-and [phase 292](evidence/spaced_reads_u280_ddr_ramulator_xci_phase292.csv).
-The three hardware runs on `hacc-legacy-01` gave a median of 28 kernel
-cycles. Each simulated phase gave 5 cycles, for a gap of 23 cycles
-(230 ns at 100 MHz). The [aligned latency figure](evidence/figures/u280-ddr-hw-vs-ramulator-plus23.png)
-overlays hardware and Ramulator after adding 23 cycles to the simulated
-latencies. The pooled p99 is 62 cycles in hardware and 52 in the aligned model.
-
-### U250 DDR4 Ramulator comparison
-
-The U250 DDR[0] bitstream used a fixed 100 MHz kernel clock. Three
-hardware captures on `hacc-legacy-02` and four simulated phases contain
-1,000 reads each. The [U250 XCI profile](spaced_reads/ramulator/u250_ddr4_2022_2.yaml)
-uses the same DRAM geometry and timing values as the U280 DDR4 profile.
-The comparison pools samples within each series. Values are kernel cycles.
-
-| Series | p50 | p90 | p95 | p99 | Maximum |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| U250 hardware | 28 | 30 | 34 | 63 | 72 |
-| Ramulator | 5 | 5 | 5 | 29 | 41 |
-| Ramulator +23 cycles | 28 | 28 | 28 | 52 | 64 |
-
-[Aligned latency figure](evidence/figures/u250-ddr-hw-vs-ramulator-plus23.png) ·
-[Per-run comparison](evidence/spaced_reads_u250_ddr_ramulator_comparison.tsv)
+The [shared DDR4 profile](spaced_reads/ramulator/ddr4_xci_2022_2.yaml) uses
+one rank of 8 Gbit ×4 devices at DDR4-2400, with `nRFC=421` and
+`nREFI=9363` from the Vivado 2022.2 XCI. The generic scheduler and address
+mapper approximate the controller for this fixed-address probe. At 100 MHz,
+U280 and U250 hardware both measured 28 cycles at P50 across their three
+captures. The shared 2.0 baseline measured five cycles in each of the
+[0](evidence/spaced_reads_ddr4_ramulator_xci_phase0.csv),
+[97](evidence/spaced_reads_ddr4_ramulator_xci_phase97.csv),
+[195](evidence/spaced_reads_ddr4_ramulator_xci_phase195.csv) and
+[292](evidence/spaced_reads_ddr4_ramulator_xci_phase292.csv) warm-ups.
+See the [Alveo comparison](evidence/alveo-ramulator21-ferrandi-20261127/README.md)
+for the per-board distributions and the 2.1 replay.
 
 [U250 replay and diagnostic sources](spaced_reads/ramulator/u250_ddr_diagnostics/README.md)
-and [diagnostic evidence](evidence/u250-ddr-diagnostics/README.md) record
+and [diagnostic evidence](evidence/u250-ddr-diagnostics/README.md) document
 the command trace and refresh-interval sensitivity runs.
 
 ### Additional U280 HBM runs on legacy-01

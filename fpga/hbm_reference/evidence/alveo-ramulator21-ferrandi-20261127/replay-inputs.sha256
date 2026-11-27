@@ -1,0 +1,7 @@
+e026a9af919bea5694bc81e251a1902b6ff7ae96c1dfefd9ec53e30992cd8f4f  /data2/home/pelorosso/thesis/toolchain-ramulator21-dca0351/u55c-replay.3ywbP9/obj/Vfpga_kernel
+45cbda648516547b5d61f93842cecf923aa2f19ba0b7f6555a56b7e8a1e5b465  /data2/home/pelorosso/thesis/toolchain-ramulator21-dca0351/ramulator-install/lib/libramulator.so.2
+719a08f29036fc6393ddb607838bc9cbbb0c36ae74ecd0a99a3938b6241f2297  run-replay.sh
+1a316fb9d955949a2810c3432822f4829e40a6407d42f71fc74120ae093b9486  profiles/ddr4-xci-matched-2400.yaml
+af81b65d01b0d08a3fd3bf9e051c2fc2c8e45f2e97a529d772113f1cc4202760  profiles/u250-ddr4-bambu-2400.yaml
+8e7d03ab9234d3e4fb6a64d3a411e2da6d107811bd4c3ec2fb8dc95f43067660  profiles/u280-hbm2-bambu-2000.yaml
+f043ce652ee57c976faac6f4f2447a55179d957bd7bcffed691b84a1ec93173a  profiles/u280-hbm2-matched-1800.yaml

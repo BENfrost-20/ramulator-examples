@@ -1,0 +1,17 @@
+profile	warmup_cycles	dram_reads	channel	refresh_scope	scope_id	refab_count	median_dram_ticks	median_us
+u280-hbm2-matched-1800	0	1000	0	PseudoChannel	0	1502	3510	3.899610
+u280-hbm2-matched-1800	97	1000	0	PseudoChannel	0	1502	3510	3.899610
+u280-hbm2-matched-1800	195	1000	0	PseudoChannel	0	1502	3510	3.899610
+u280-hbm2-matched-1800	292	1000	0	PseudoChannel	0	1503	3510.0	3.899610
+u280-hbm2-bambu-2000	0	1000	0	PseudoChannel	0	1502	3900	3.900000
+u280-hbm2-bambu-2000	97	1000	0	PseudoChannel	0	1502	3900	3.900000
+u280-hbm2-bambu-2000	195	1000	0	PseudoChannel	0	1502	3900	3.900000
+u280-hbm2-bambu-2000	292	1000	0	PseudoChannel	0	1502	3900	3.900000
+ddr4-xci-matched-2400	0	1000	0	Rank	0	750	9363	7.799379
+ddr4-xci-matched-2400	97	1000	0	Rank	0	750	9363	7.799379
+ddr4-xci-matched-2400	195	1000	0	Rank	0	751	9363.0	7.799379
+ddr4-xci-matched-2400	292	1000	0	Rank	0	751	9363.0	7.799379
+u250-ddr4-bambu-2400	0	1000	0	Rank	0	751	9363.0	7.799379
+u250-ddr4-bambu-2400	97	1000	0	Rank	0	751	9363.0	7.799379
+u250-ddr4-bambu-2400	195	1000	0	Rank	0	752	9363	7.799379
+u250-ddr4-bambu-2400	292	1000	0	Rank	0	752	9363	7.799379

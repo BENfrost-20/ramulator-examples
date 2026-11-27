@@ -1,0 +1,17 @@
+board	file	reads	p50	p90	p95	p99	max
+u55c-hbm2	spaced_reads_u55c_08.csv	1000	26	26	47	59	66
+u280-hbm2	spaced_reads_u280_hbm_legacy01_run1.csv	1000	26	26	35	51	57
+u280-hbm2	spaced_reads_u280_hbm_legacy01_run2.csv	1000	26	26	39	52	57
+u280-hbm2	spaced_reads_u280_hbm_legacy01_run3.csv	1000	26	27	41	52	57
+u280-hbm2	spaced_reads_u280_hbm_legacy02_run1.csv	1000	26	26	40	52	57
+u280-hbm2	spaced_reads_u280_hbm_legacy02_run2.csv	1000	26	26	38	52	57
+u280-hbm2	spaced_reads_u280_hbm_legacy02_run3.csv	1000	26	26	39	52	57
+u280-hbm2	spaced_reads_u280_hbm_legacy01_run1_20261124.csv	1000	26	27	41	52	57
+u280-hbm2	spaced_reads_u280_hbm_legacy01_run2_20261124.csv	1000	26	26	38	52	57
+u280-hbm2	spaced_reads_u280_hbm_legacy01_run3_20261124.csv	1000	26	26	37	52	57
+u280-ddr4	spaced_reads_u280_ddr_legacy01_run1_20261124.csv	1000	28	30	34	61	71
+u280-ddr4	spaced_reads_u280_ddr_legacy01_run2_20261124.csv	1000	28	30	30	61	72
+u280-ddr4	spaced_reads_u280_ddr_legacy01_run3_20261124.csv	1000	28	30	32	62	71
+u250-ddr4	spaced_reads_u250_ddr_legacy02_run1_20261125.csv	1000	28	30	38	63	72
+u250-ddr4	spaced_reads_u250_ddr_legacy02_run2_20261125.csv	1000	28	30	34	63	72
+u250-ddr4	spaced_reads_u250_ddr_legacy02_run3_20261125.csv	1000	28	30	31	62	70
