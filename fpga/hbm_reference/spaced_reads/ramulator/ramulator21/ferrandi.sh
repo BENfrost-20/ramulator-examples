@@ -92,9 +92,11 @@ git -C "$bambu_src" submodule update --init --depth 1 -- "$ram_path"
 [[ "$(git -C "$bambu_src/$ram_path" rev-parse HEAD)" == "$ramulator_rev" ]] || {
     echo "Unexpected Ramulator revision at $bambu_src/$ram_path." >&2; exit 2;
 }
+# Explicit thread linkage supports Linux systems with a separate libpthread.
 "$cmake" -S "$bambu_src/$ram_path" -B "$ram_build" -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_CXX_COMPILER="$cxx" -DPython3_EXECUTABLE:FILEPATH="$python3_exe" \
     "${launcher[@]}" -DCMAKE_INSTALL_PREFIX="$ram_prefix" \
+    -DCMAKE_SHARED_LINKER_FLAGS=-pthread -DCMAKE_EXE_LINKER_FLAGS=-pthread \
     -DRAMULATOR_PYTHON_BINDINGS=OFF -DYAML_CPP_BUILD_TESTS=OFF -DFMT_TEST=OFF \
     2>&1 | tee "$logs/ramulator-configure.log"
 "$cmake" --build "$ram_build" --parallel "$jobs" 2>&1 | tee "$logs/ramulator-build.log"
