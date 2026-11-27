@@ -196,7 +196,8 @@ a controlled comparison that changes its refresh schedule.
 Use the [Ferrandi replay](spaced_reads/ramulator/ramulator21/README.md)
 for the current U55C experiment. It runs the same 1,000-read RTL against
 the native 1800 and 2000 MT/s profiles and compares against the recorded
-hardware and Ramulator 2.0 traces.
+hardware and Ramulator 2.0 traces. The [27 November 2026 Ferrandi archive](evidence/u55c-ramulator21-ferrandi-20261127/README.md) contains the raw reads,
+effective profiles, diagnostics and English comparison figures.
 
 ## Historical Ferrandi Ramulator 2.0 results
 

@@ -1,0 +1,9 @@
+profile	phase	read_commands	channel	pseudochannel	REFab	median_interval_dram_ticks
+bambu-2000	0	1000	0	0	1504	3900
+bambu-2000	97	1000	0	0	1504	3900
+bambu-2000	195	1000	0	0	1504	3900
+bambu-2000	292	1000	0	0	1505	3900.0
+matched-rate-1800	0	1000	0	0	1504	3510
+matched-rate-1800	97	1000	0	0	1504	3510
+matched-rate-1800	195	1000	0	0	1504	3510
+matched-rate-1800	292	1000	0	0	1505	3510.0
