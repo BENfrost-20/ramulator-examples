@@ -137,7 +137,8 @@ class ProvenanceTests(unittest.TestCase):
     def test_hardware_not_coupled_to_ramulator_revision(self):
         config=json.loads((ROOT/'fpga/toolchain.json').read_text())
         self.assertIn('cda4db2e724df357f749c0c41b12bdc065462ced',config['hardware_accepted_revisions'])
-        self.assertEqual(config['bambu']['ref'],'feature/ramulator')
-        self.assertEqual(config['ramulator2']['revision'],'9a8ed857455d041524043bc5fb45eb7f07e6a731')
+        self.assertEqual(config['bambu']['ref'],'upgrade/ramulator-2.1-platform-calibration')
+        self.assertEqual(config['ramulator2']['revision'],'3fec8f1cbddf75f4005426fd206342096612d100')
+        self.assertIn(config['bambu']['revision'],config['hardware_accepted_revisions'])
 
 if __name__=='__main__': unittest.main()

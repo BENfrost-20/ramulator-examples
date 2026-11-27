@@ -1,6 +1,6 @@
 {
   "repository": "ferrandi/ramulator2",
-  "revision": "9a8ed857455d041524043bc5fb45eb7f07e6a731",
+  "revision": "3fec8f1cbddf75f4005426fd206342096612d100",
   "library_sha256": "REPLACE_WITH_BUILT_INSTALLED_LIBRARY_SHA256",
   "build_evidence": "REPLACE_WITH_SOURCE_BUILD_INSTALL_AND_LOG_FINGERPRINTS"
 }

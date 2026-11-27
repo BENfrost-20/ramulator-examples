@@ -57,7 +57,7 @@ clock target for each native mode.
     bash fpga/hbm_reference/run_bambu_native.sh
     bash fpga/hbm_reference/run_bambu_native.sh 15
     bash fpga/hbm_reference/run_bambu_native.sh --ramulator-config smoke/configs/hbm2_32ch.yaml
-    bash fpga/hbm_reference/run_bambu_native.sh --ramulator-config smoke/configs/hbm2_u55c_1800.yaml
+    bash fpga/hbm_reference/run_bambu_native.sh --ramulator-config fpga/hbm_reference/spaced_reads/ramulator/ramulator21/profiles/matched-rate-1800.yaml
 
 The argument 15 sets both memory delays to 15 cycles. Ramulator runs retain
 a private copy of the selected YAML and preserve its modeled channel count.
@@ -191,7 +191,14 @@ Attribution to refresh requires visibility into controller activity or
 a controlled comparison that changes its refresh schedule.
 [AMD HBM refresh timing](https://docs.amd.com/r/en-US/pg276-axi-hbm/Raw-Throughput-Evaluation)
 
-## Spaced reads in the Ferrandi Ramulator model
+## Spaced reads in Ramulator 2.1
+
+Use the [Ferrandi replay](spaced_reads/ramulator/ramulator21/README.md)
+for the current U55C experiment. It runs the same 1,000-read RTL against
+the native 1800 and 2000 MT/s profiles and compares against the recorded
+hardware and Ramulator 2.0 traces.
+
+## Historical Ferrandi Ramulator 2.0 results
 
 The same read generator ran in Verilator against the Ferrandi Ramulator
 library with the 1800 MT/s U55C profile, `AllBank` and nominal tREFI of

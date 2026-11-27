@@ -62,26 +62,92 @@ selected by the HBM board aliases), while `smoke/clock_ratio.yaml` configures th
 
 ## Setup and execution
 
-Use an installed Bambu supporting `--enable-ramulator`, Verilator, Python 3.8+,
-and the **64-bit installed** Ramulator library from `ferrandi/ramulator2`.
-The recipes use the `I386_CLANG13` HLS frontend. Install Clang 13 for synthesis
-and a host Clang compiler (the runner tries Clang 19 first). Required command-line
-tools include Make, Git, Bash, Awk, `bc`, `envsubst`, `timeout` and the Binutils
-utilities `objcopy` and `readelf`. The runtime library check uses `ldd`.
+### Toolchain repositories
+
+- **ramulator-examples** contains the benchmark recipes, FPGA probes and
+  validation tools in this checkout. The upstream repository is
+  [ferrandi/ramulator-examples](https://github.com/ferrandi/ramulator-examples).
+  Bambu also pins a snapshot at `examples/ramulator-examples` for its own
+  examples. Run the commands below from the standalone checkout you want to test.
+- **PandA-bambu** contains the HLS compiler, generated simulation testbenches,
+  MDPI memory driver, and platform configuration and transport calibration.
+  Use [the pinned calibration branch revision](https://github.com/ferrandi/PandA-bambu/tree/dca0351c92ff287c070d482088858aadca5f6a4a).
+- **ferrandi/ramulator2** supplies the DRAM models and `libramulator.so`.
+  In the calibration branch, `ext/ramulator2-no-spdlog` points to
+  [the Ferrandi Ramulator 2.1 revision](https://github.com/ferrandi/ramulator2/tree/3fec8f1cbddf75f4005426fd206342096612d100).
+  The Bambu checkout fetches that source through Git submodules, and its
+  preparation script builds Ramulator into its own installation prefix.
+  The standalone simulator can also be built from this Ramulator commit.
+  That build alone does not provide the Bambu compiler or MDPI driver.
+
+The 2.0 data remain available for comparison. To reproduce those original
+runs, use the [pre-upgrade checkout](https://github.com/BENfrost-20/ramulator-examples/tree/5b7579f2e260a5b332e6bbf90fa4c21ce272977d)
+with the toolchain recorded by each experiment. The original Jesun repositories listed
+under credits are source history. GAPBS, MachSuite and PolyBenchC are
+benchmark source dependencies and are separate from the simulator.
+
+### Ferrandi U55C replay
+
+Use the [U55C 1,000-read replay](fpga/hbm_reference/spaced_reads/ramulator/ramulator21/README.md)
+to build the pinned library with an existing Ferrandi toolchain and compare at
+1800 and 2000 MT/s against hardware and Ramulator 2.0. The setup accepts
+`PYTHON3` to select an interpreter when the host default is older than 3.10.
+
+### Build on Linux x86-64
+
+Use the pinned pair from [the toolchain manifest](fpga/toolchain.json).
+Install GCC 13 or newer for the Bambu build, Clang/LLVM 13 for
+`I386_CLANG13`, and Verilator for co-simulation. The runner uses a host Clang
+(trying Clang 19 first) plus Make, Git, Bash, Awk, `bc`, `envsubst`, `timeout`,
+`objcopy`, `readelf` and `ldd`. Ramulator needs Python 3.10+ at build time
+and fetches yaml-cpp and fmt during CMake configuration.
+
+From the directory that will hold the Bambu source and Ramulator install:
+
+```bash
+git clone --branch upgrade/ramulator-2.1-platform-calibration \
+  https://github.com/ferrandi/PandA-bambu.git PandA-bambu-ramulator21
+bambu_src="$PWD/PandA-bambu-ramulator21"
+ramulator_build="$PWD/ramulator21"
+git -C "$bambu_src" checkout --detach dca0351c92ff287c070d482088858aadca5f6a4a
+git -C "$bambu_src" submodule update --init --recursive
+git -C "$bambu_src" ls-tree HEAD ext/ramulator2-no-spdlog
+git -C "$bambu_src/ext/ramulator2-no-spdlog" rev-parse HEAD
+
+# Ensure Clang/LLVM 13 is on PATH before configuring Bambu.
+cmake -S "$bambu_src" -B "$bambu_src/build" -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_C_COMPILER=gcc-13 -DCMAKE_CXX_COMPILER=g++-13 \
+  -DCMAKE_INSTALL_PREFIX="$bambu_src/install"
+cmake --build "$bambu_src/build" --parallel 4
+cmake --install "$bambu_src/build"
+
+# The output directory must be new. The script installs the submodule pinned above.
+CC=gcc-13 CXX=g++-13 bash \
+  "$bambu_src/panda_regressions/hls/bambu_ramulator/prepare_ramulator.sh" "$ramulator_build"
+export RAMULATOR2_DIR="$ramulator_build/install"
+source "$bambu_src/install/settings.sh"
+```
+
+Run from the standalone `ramulator-examples` checkout. To persist the paths
+for future shells, copy `env.example.sh` to `env.sh` and set both prefixes.
 
 ```sh
-git clone --recursive https://github.com/ferrandi/ramulator-examples.git
-cd ramulator-examples
-cp env.example.sh env.sh
-# Configure BAMBU_HLS and RAMULATOR2_DIR, then:
-source env.sh
-./smoke/run.sh --tag smoke
-./micro/run.sh --tag patterns
-./openmp/run.sh --tag openmp
-./gapbs/run.sh --tag graphs
-./polybench/run.sh --tag polybench
-./machsuite/run.sh --tag machsuite
+./smoke/run.sh --case smoke_axi_1ch --tag ramulator21 --no-compare
+./smoke/run.sh --case diagnostic_ddr3 --tag ramulator21 --no-compare
+./smoke/run.sh --case diagnostic_ddr5 --tag ramulator21 --no-compare
+./smoke/run.sh --case diagnostic_hbm2 --tag ramulator21 --no-compare
 ```
+
+With 2.1, Bambu derives DRAM ticks from the accelerator period and DRAM
+`tCK`. Preset YAMLs are translated by the Ferrandi adapter. Custom 2.0
+timing overrides such as the historical U55C 1800 MT/s and XCI-aligned DDR4
+measurements require a native 2.1 YAML with resolved timing constraints for
+a new 2.1 experiment. Reproduce those archived traces with their recorded
+2.0 toolchain. Bambu's `--ramulator-profile=alveo-u55c` (also
+`alveo-u250` or `alveo-u280`) selects a native board profile. To inspect
+resolved configuration and calibration artifacts, use the
+[pinned Bambu profile regression](https://github.com/ferrandi/PandA-bambu/blob/dca0351c92ff287c070d482088858aadca5f6a4a/panda_regressions/hls/bambu_ramulator/run_profiles.py).
+Use `--no-compare` for initial 2.1 runs while establishing a new baseline.
 
 GAPBS, PolyBench and MachSuite use pinned `sources/` submodules. For an existing checkout:
 

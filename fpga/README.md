@@ -12,19 +12,20 @@ Use the prepared RTL from the U55C image to run the single-port
 and reads the same wrapper counters as the board host. For the first comparison,
 select `n=1`, repetition 0, and the exact YAML from the native Bambu run.
 
-Run on Ferrandi with the existing Verilator, GCC 13, and Ramulator installation.
+Run on Ferrandi with Verilator, GCC 13, and the
+[Ramulator 2.1 installation](../README.md#build-on-linux-x86-64).
 Set the paths below for the local environment. Keep the output directory
 separate from the prepared build.
 
 ```bash
 cd "$HOME/thesis/ramulator-examples"
 prepared="$PWD/.fpga/bitstream-xfTkobFQ/probe-single"
-export RAMULATOR2_DIR="$HOME/thesis/ramulator-ferrandi-20261116-105256/install"
+export RAMULATOR2_DIR="$HOME/thesis/ramulator21/install"
 export FPGA_VERILATOR=/opt/verilator/verilator-5.030/bin/verilator
 export FPGA_VERILATOR_CXX=/usr/bin/g++-13
 out=$(mktemp -d "$PWD/.fpga/probe-ramulator.XXXXXX")
 python3 -B fpga/functional.py --prepared "$prepared" --output "$out" \
-  --ramulator-config "$PWD/smoke/configs/hbm2_32ch.yaml" --n 1
+  --ramulator-config "$PWD/smoke/configs/hbm2_32ch.yaml" --clock-period-ns 10 --n 1
 cat "$out/ramulator-results.jsonl" "$out/ramulator-axi.jsonl"
 ```
 
@@ -34,11 +35,14 @@ cat "$out/ramulator-results.jsonl" "$out/ramulator-axi.jsonl"
   acceptance, read callback and write acceptance. `axi_cycle` counts from
   testbench reset. Compare differences between AXI events within the same run.
 - `ramulator-config.yaml` retains the exact input YAML. `ramulator-run.json`
-  records its hash, the RTL and library hashes, and the write response policy.
+  records its hash, the RTL and library hashes, the API version, the input AXI
+  period and the write response policy.
 
-The bridge uses the flat YAML's GEM5 frontend and advances Ramulator by
-`MemorySystem.clock_ratio` DRAM ticks per AXI cycle, carrying fractional ticks
-between cycles. The model clock advances from testbench reset. The bridge
+With Ramulator 2.1 the bridge uses the External frontend and derives DRAM
+ticks from the specified AXI period and the DRAM model's `tCK`. It accepts
+native 2.1 YAML and legacy presets supported by Ferrandi's adapter. Select the
+period that matches the native Bambu run or the hardware clock being compared.
+The bridge carries fractional ticks between cycles. The model clock advances from testbench reset. The bridge
 translates the simulated AXI buffer base back to the probe's logical address
 (`0x40000000` for the first word). The testbench keeps the data and byte strobes
 in a local slab, returns reads after the Ramulator callback, and queues an AXI

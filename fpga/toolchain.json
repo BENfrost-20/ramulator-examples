@@ -1,53 +1,60 @@
 {
   "bambu": {
     "repository": "ferrandi/PandA-bambu",
-    "ref": "feature/ramulator",
-    "revision": "d1975e817a77ac3fe046ccb3adb471e05224ec81",
+    "ref": "upgrade/ramulator-2.1-platform-calibration",
+    "revision": "dca0351c92ff287c070d482088858aadca5f6a4a",
     "files": {
       ".gitmodules": "9d94bd13ac76d4dcf0b3591163c9ac44d1eff5498ef347c127b7a2af0b68c904",
-      "CMakeLists.txt": "c790bd264343f2acdbe528fc095a49925fce7bc2e1ead772f3f6fa0b03363099",
-      "etc/libmdpi/CMakeLists.txt": "042301db576079e5cd059f3b6c031c315dda3a88c4895d8528451857486e8a88",
-      "etc/libmdpi/Makefile.mk": "c0ebf7fb9727cef6140dcad54726b7f9e97070b069c07d132e2fa2586e603112",
-      "etc/libmdpi/mdpi_driver.cpp": "038ec532224c716a652b62107192877854b5e75c66fcf7d9562d7448cc3054b9",
-      "panda_regressions/hls/bambu_ramulator/README.md": "01a47323292d66829f206690b2716cd39dab47fe8a70a320ea4a47490c1a4da6",
-      "panda_regressions/hls/bambu_ramulator/hbm2.yaml": "53c7b0a53289f134e2fd121e732302770e7ad0b9d31b3b23e9ae5bea1193960b",
+      "CMakeLists.txt": "174d7466d6b01d3609f3119b8fedf05fed7b9e2feda79f01b5b17f1b5c1364c0",
+      "etc/libmdpi/CMakeLists.txt": "fa392ddcf6c488c9a166e5f95ce4fc5bb94b77227d28ad4ee8e486f0d6309f0c",
+      "etc/libmdpi/Makefile.mk": "7c4de97c1915ab926223257cc86e7d94d71b220db81f600df199aa8883e4f360",
+      "etc/libmdpi/mdpi_driver.cpp": "d8bf7df70ead6eae27516adb39ee2db7153eba19453f65e9603940f2acc4cd82",
+      "panda_regressions/hls/bambu_ramulator/README.md": "2f076cb6ee7ed52c538e29168b3e28b42745f6dedda0a9d2dbb15a66e26c9b5c",
+      "panda_regressions/hls/bambu_ramulator/hbm2.yaml": "f17ab11faf8cd6e386563b78b0c7f3a351fe2e2c25063f099e2de3732c31deba",
       "panda_regressions/hls/bambu_ramulator/hbm_chase.cpp": "cd023973aa99bfb3974848bafc29a08636336fbe6a43cac4ba90a2a7be25f0ce",
       "panda_regressions/hls/bambu_ramulator/hbm_gather.cpp": "ef838fbbf700369d5aa034f7117d7db5d7d0027041592b1a003809a36503c325",
       "panda_regressions/hls/bambu_ramulator/hbm_scatter.cpp": "0b0c023cbb0165bb30f80825cbc47276a7f3723a3f687bb20239dc727e63f0a8",
-      "panda_regressions/hls/bambu_ramulator/kernel.cpp": "354f475415b5308c4e13deb50cc8c635d12837c631f0f37e51b00c872d649fee",
+      "panda_regressions/hls/bambu_ramulator/kernel.cpp": "6d15b5fdd74e213d0cd72bc1571eb7d8b481b7a017810e011824d69bc7e4340a",
       "panda_regressions/hls/bambu_ramulator/mixed_banked.cpp": "c19ef558560189cc6c77d1446a07727dfbd7e4101fe5ac69c55343eb21d21724",
-      "panda_regressions/verilog/ramulator/host.cpp": "f54d60e312c533933ba8a8a4d0003764fc28db9e29b66192c143fbd1bf5726a5",
-      "panda_regressions/verilog/ramulator/row_policy.cpp": "d4dbcbf545a18bc7ff1ccf44c4371ce6c56118f6c01a2ce391f3f1c00d1b1bc9",
-      "src/HLS/interface/bus_interface.cpp": "68b0679c201f3aed8e509e02e2af8ff20746afe20aadacdff3a4f5262fa9dfe2",
+      "panda_regressions/verilog/ramulator/host.cpp": "f93d261a94f4d8ec574a636f9a599ac2394752e5575098b88db724e50b57d30e",
+      "panda_regressions/verilog/ramulator/row_policy.cpp": "035e37427b44b2402b3f4e33b8ac148e07c516d317f65a6b514d57309655151d",
+      "src/HLS/interface/bus_interface.cpp": "40cac25f6619f88d9cabe48c97b46169113c1422f1f18a1f0a237566907dbdd0",
       "src/Parameter.cpp": "36dd3c7a8093633754f6649ca82a53c03f6190ad6d13033c16f610aa83c83481",
       "cmake/ConfigHeaders.cmake": "326eba6c53f0f8ed8bb686173cb666491bc2a04a05754430819775e68004308c",
-      ".github/workflows/reusable-ramulator.yml": "860c3062deb4af8e2f28704483686e8ff6c1e2269fa495073959c6cd155ee126",
-      "panda_regressions/hls/bambu_ramulator/prepare_ramulator.sh": "31c823d0d0ee084d2d948dad065f4c345c40c9814ae4e3c1547d532a6530bfdc",
-      "panda_regressions/hls/bambu_ramulator/run_tests.py": "43ad7d4428929c0bcae905f53ae2d583ad37b999b8a97ba7925172992bde7c53",
-      "panda_regressions/verilog/ramulator/clock_contract.c": "774c80da66dea03d523e64df2ffbc2c63820b6243e4b7cb03cc100022c493065",
-      "panda_regressions/verilog/ramulator/memory_contract.c": "cf9b00023c716c4f37048b2c48c8ff877c7bc7a39566c9047170df64426ee910"
+      ".github/workflows/reusable-ramulator.yml": "fa5a7b2feacc5dfb702e77d9900b37c2d069a59916a7f53b2ca2b882c90b4bab",
+      "panda_regressions/hls/bambu_ramulator/prepare_ramulator.sh": "9113daf3b5f165c1fe8ce698af35b3835980d04581148ae02b9e65940d4baacc",
+      "panda_regressions/hls/bambu_ramulator/run_tests.py": "357407fbc9c67bc765ff2346cdc13757ec5536625327b78745584425a5dca8c1",
+      "panda_regressions/verilog/ramulator/clock_contract.c": "a599b6ce1fead11b2a1b2f0509c0dab8e4320f2bd7a14471c3a3c2ef090fc1ef",
+      "panda_regressions/verilog/ramulator/memory_contract.c": "cf9b00023c716c4f37048b2c48c8ff877c7bc7a39566c9047170df64426ee910",
+      "src/utility/ramulator_config.cpp": "c0109617cdf8f98c3afa7729833ad5908a74d399d2423d57dbf80b172880a333",
+      "etc/libmdpi/calibrations/ramulator_configuration.xsd": "543e525ec638d7d6a96529f6fd6bb0659da6a6246bccfea1a47caa12067ad008"
     }
   },
   "ramulator2": {
     "repository": "ferrandi/ramulator2",
-    "revision": "9a8ed857455d041524043bc5fb45eb7f07e6a731",
+    "revision": "3fec8f1cbddf75f4005426fd206342096612d100",
     "files": {
-      "src/addr_mapper/impl/linear_mappers.cpp": "8e915e946de2011a5a23298972008df2c95e2e3ccc9bef020469f18e823d5cc3",
-      "src/base/request.h": "d30e56d5a45fa7a54151c5ecb0d61c2209f898d85ccee1dbb1cd1e8efc692073",
-      "src/dram/impl/DDR4.cpp": "cd833998ec5768ef73d805020b7039b2aa31a18d9593578d20adc484573384f1",
-      "src/dram/impl/HBM2.cpp": "5bd05bcc88ad968ba3431f6a6d158deb7078f8f01c1f438ac78d693b7933d2e7",
-      "src/dram_controller/impl/generic_dram_controller.cpp": "df4e7b347d7c19d37ab90b0a7966d6ed128424ea5d9dbab8d831dff8489fb317"
-    }
+      "CMakeLists.txt": "dd3711a37550011e5033feefa8711479a3893517509cf60cac235d5f117f16d5",
+      "src/ramulator/bambu/legacy_config.h": "f6f6eebaf1b2ae276d8d2d20e26871a183ef5bf2d34a8244b1a8da368f0f8401",
+      "src/ramulator/bambu/legacy_config.cpp": "ea046bdadf412bd365a4df4aaa8fbae894d324472f5a2b18a0624e398cad481b",
+      "src/ramulator/base/request.h": "8e1d3dad3be19571eb7c50f23e6502919c137ee34d67564e1e77202f3eea272b",
+      "src/ramulator/dram/impl/HBM2.cpp": "0e814b778ac9210680b220f3b215d9b55fc50e624a955b3f83f5b0cecb98d6f2",
+      "src/ramulator/dram/impl/DDR4.cpp": "48da80790e6be036684855258e7506c4f561cebbc3314a4621147af6141db4ca",
+      "src/ramulator/memory_system/impl/generic_dram_system.cpp": "7d8d69b911671790c58efe273b2ea91c978a3710092006cc48002e776538d2e8"
+    },
+    "version": "2.1",
+    "submodule": "ext/ramulator2-no-spdlog"
   },
   "policy": "Ferrandi source and matching binary required; no Jesun fallback",
   "hardware_accepted_revisions": [
     "d1975e817a77ac3fe046ccb3adb471e05224ec81",
     "cda4db2e724df357f749c0c41b12bdc065462ced",
-    "622610fd517e38cd1fb7a47f1dfc3314314a1778"
+    "622610fd517e38cd1fb7a47f1dfc3314314a1778",
+    "dca0351c92ff287c070d482088858aadca5f6a4a"
   ],
   "selection_evidence": {
-    "branch_audit": "feature/ramulator contains CI, MDPI backend, production RTL regressions and a pinned ferrandi/ramulator2 submodule; main is independently usable for hardware synthesis",
+    "branch_audit": "The upgrade branch contains the 2.1 MDPI backend, board profiles, transport calibration and the pinned Ferrandi Ramulator submodule.",
     "banner": "src/Parameter.cpp constructs Version: <package> - Revision <revision_hash>[-branch]; accept 7..40 hex only when unambiguous",
-    "ramulator_semantics": "external MDPI clock uses a fractional phase accumulator; writes complete on request acceptance, not device-cell drain"
+    "ramulator_semantics": "MDPI derives DRAM ticks from accelerator period and DRAM tCK. Transaction timing uses Ramulator 2.1. Optional transport delays are modeled in the Bambu testbench."
   }
 }

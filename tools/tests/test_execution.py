@@ -111,5 +111,39 @@ class BenchmarkExecutionTests(unittest.TestCase):
         self.assertEqual(set(results.values()), {"PASS"})
 
 
+class RamulatorHostTests(unittest.TestCase):
+    def test_preflight_matches_driver_and_multiarch_library(self):
+        with tempfile.TemporaryDirectory() as temp:
+            prefix = Path(temp).resolve()
+            include = prefix / "include/ramulator"
+            for relative in ("base/config.h", "bambu/legacy_config.h", "frontend/i_frontend.h"):
+                header = include / relative
+                header.parent.mkdir(parents=True, exist_ok=True)
+                header.touch()
+            library = prefix / "lib/x86_64-linux-gnu/libramulator.so"
+            library.parent.mkdir(parents=True)
+            library.write_bytes(b"\x7fELF\x02\x01" + bytes(12) + b"\x3e\x00")
+            mdpi = prefix / "share/panda/libmdpi"
+            mdpi.mkdir(parents=True)
+            (mdpi / "Makefile.mk").touch()
+            driver = mdpi / "mdpi_driver.cpp"
+            driver.write_text('#include "ramulator/bambu/legacy_config.h"\n')
+            with patch.dict(os.environ, BAMBU_HLS=str(prefix), BAMBU_HLS_BACKEND_PATH=str(prefix),
+                            RAMULATOR2_DIR=str(prefix), RAMULATOR2_LIBDIR=""), \
+                 patch.object(execution.shutil, "which", return_value="/usr/bin/true"), \
+                 patch.object(execution.platform, "system", return_value="Linux"), \
+                 patch.object(execution.platform, "machine", return_value="x86_64"), \
+                 patch.object(execution, "capture", return_value={"exit_code": 0, "output": ""}):
+                _, _, env, library_info, errors = execution.inspect_host()
+                self.assertEqual(errors, [])
+                self.assertEqual(env["RAMULATOR2_LIBDIR"], str(library.parent))
+                self.assertEqual(library_info["api_version"], "2.1")
+                self.assertEqual(library_info["path"], str(library))
+
+                driver.write_text('#include "frontend/frontend.h"\n')
+                _, _, _, _, errors = execution.inspect_host()
+                self.assertEqual(errors, [f"Installed Bambu MDPI does not support Ramulator 2.1: {driver}"])
+
+
 if __name__ == "__main__":
     unittest.main()

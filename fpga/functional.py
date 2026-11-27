@@ -1,6 +1,7 @@
 """Simulate a prepared FPGA kernel and its control wrapper with Verilator."""
 import argparse
 import json
+import math
 import os
 from pathlib import Path
 import shutil
@@ -10,6 +11,7 @@ ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
 from fpga.prepare import digest
 from fpga.run import run
+from tools.ramulator import API_VERSION, installed_library, require_headers
 
 
 def source(info, size=None):
@@ -77,8 +79,8 @@ int main(int argc,char** argv){
  try{
  Verilated::commandArgs(argc,argv);
 #ifdef FPGA_WITH_RAMULATOR
- if (argc != 2) throw std::runtime_error("Pass the Ramulator YAML path");
- timing = std::make_unique<RamulatorTiming>(argv[1]);
+ if (argc != 3) throw std::runtime_error("Pass the Ramulator YAML path and AXI period");
+ timing = std::make_unique<RamulatorTiming>(argv[1], std::stold(argv[2]));
  model_data_base = '''+str(info.get('logical_base', 0))+r'''ULL;
  axi_trace.open("ramulator-axi.jsonl");
  if (!axi_trace) throw std::runtime_error("Cannot open Ramulator AXI trace");
@@ -131,16 +133,10 @@ int main(int argc,char** argv){
     return '\n'.join(code)
 
 
-def ramulator_flags(prefix):
-    header = prefix / 'include' / 'ramulator' / 'base' / 'config.h'
-    if not header.is_file():
-        raise ValueError(f'Ramulator 2 headers missing under {prefix}; set RAMULATOR2_DIR')
-    libraries = [prefix / 'lib' / 'libramulator.so', prefix / 'lib64' / 'libramulator.so',
-                 *sorted((prefix / 'lib').glob('*/libramulator.so'))]
-    library = next((path for path in libraries if path.is_file()), None)
-    if library is None:
-        raise ValueError(f'libramulator.so missing under {prefix}; set RAMULATOR2_DIR')
-    cflags = ['-DFPGA_WITH_RAMULATOR', '-I'+str(header.parents[1]), '-I'+str(prefix/'include')]
+def ramulator_flags(prefix, libdir=None):
+    require_headers(prefix)
+    library = installed_library(prefix, libdir)
+    cflags = ['-DFPGA_WITH_RAMULATOR', '-I'+str(prefix/'include')]
     # Verilator places -LDFLAGS before the objects in the link command.
     ldflags = ['-L'+str(library.parent), '-Wl,-rpath,'+str(library.parent),
                '-Wl,--no-as-needed', '-lramulator', '-Wl,--as-needed']
@@ -153,6 +149,8 @@ def main():
     ap.add_argument('--output', type=Path, help='Separate directory for build and results')
     ap.add_argument('--generate-only', action='store_true')
     ap.add_argument('--ramulator-config', type=Path, help='Use this Ramulator 2 YAML instead of AXI RAM')
+    ap.add_argument('--clock-period-ns', type=float,
+                    help='AXI clock period in ns (required with Ramulator 2.1)')
     ap.add_argument('--n', type=int, help='Run one probe with this size and repetition 0')
     args = ap.parse_args()
 
@@ -169,6 +167,12 @@ def main():
             ap.error('Ramulator currently supports memory_probe_single with one AXI port')
         if args.n is None:
             ap.error('--ramulator-config requires --n to select one isolated probe run')
+        if args.clock_period_ns is None:
+            ap.error('--ramulator-config requires --clock-period-ns to derive AXI timing from DRAM tCK')
+
+    if args.clock_period_ns is not None and (args.ramulator_config is None
+            or not math.isfinite(args.clock_period_ns) or args.clock_period_ns < 0.000001):
+        ap.error('--clock-period-ns requires --ramulator-config and a finite period of at least 1 fs')
 
     out = args.output.resolve() if args.output else prepared
     out.mkdir(parents=True, exist_ok=True)
@@ -190,7 +194,9 @@ def main():
         prefix = os.environ.get('RAMULATOR2_DIR')
         if not prefix:
             ap.error('Set RAMULATOR2_DIR to the installed Ramulator 2 prefix')
-        includes, ldflags, library = ramulator_flags(Path(prefix).resolve())
+        libdir = os.environ.get('RAMULATOR2_LIBDIR')
+        includes, ldflags, library = ramulator_flags(
+            Path(prefix).resolve(), Path(libdir).resolve() if libdir else None)
         cflags += ['-std=c++20', *includes]
         build_flags += ['-LDFLAGS', ' '.join(ldflags)]
         snapshot = out/'ramulator-config.yaml'
@@ -200,11 +206,13 @@ def main():
             'config_sha256': digest(snapshot),
             'library': str(library),
             'library_sha256': digest(library),
+            'ramulator_version': API_VERSION,
+            'axi_period_ns': args.clock_period_ns,
             'rtl_sha256': info['rtl_sha256'],
             'logical_base': info['logical_base'],
             'write_response': 'ramulator_acceptance',
         }, indent=2)+'\n')
-        run_args.append(snapshot)
+        run_args.extend((snapshot, str(args.clock_period_ns)))
         mode = 'ramulator'
     else:
         cflags.append('-std=c++17')

@@ -1,9 +1,15 @@
 # Copy to fpga/build.env.sh. This file is sourced by fpga/build.sh.
 # Precedence: command-line flags > existing environment > these defaults.
 # Paths are site settings; this file contains no license credentials.
-export FPGA_BAMBU_SOURCE="${FPGA_BAMBU_SOURCE:-$HOME/thesis/PandA-bambu-ferrandi}"
-export FPGA_BAMBU="${FPGA_BAMBU:-$FPGA_BAMBU_SOURCE/install/bin/bambu}"
-export FPGA_BAMBU_SETTINGS="${FPGA_BAMBU_SETTINGS-$FPGA_BAMBU_SOURCE/install/settings.sh}"
+ferrandi_toolchain="$HOME/thesis/toolchain-ramulator21-dca0351"
+if [[ -n "${FPGA_BAMBU_SOURCE:-}" && "$FPGA_BAMBU_SOURCE" != "$ferrandi_toolchain/PandA-bambu" ]]; then
+    ferrandi_bambu_install="$FPGA_BAMBU_SOURCE/install"
+else
+    export FPGA_BAMBU_SOURCE="$ferrandi_toolchain/PandA-bambu"
+    ferrandi_bambu_install="$ferrandi_toolchain/bambu-install"
+fi
+export FPGA_BAMBU="${FPGA_BAMBU:-$ferrandi_bambu_install/bin/bambu}"
+export FPGA_BAMBU_SETTINGS="${FPGA_BAMBU_SETTINGS-$ferrandi_bambu_install/settings.sh}"
 export FPGA_CLANG_BIN="${FPGA_CLANG_BIN:-$HOME/thesis/toolchains/clang-13/bin}"
 export FPGA_VIVADO_SETTINGS="${FPGA_VIVADO_SETTINGS-/opt/Xilinx/Vivado/2024.2/settings64.sh}"
 export FPGA_VITIS_SETTINGS="${FPGA_VITIS_SETTINGS-/opt/Xilinx/Vitis/2024.2/settings64.sh}"

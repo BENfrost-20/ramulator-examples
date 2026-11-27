@@ -27,6 +27,7 @@ from zipfile import BadZipFile, ZipFile
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from tools.golden import compare, record_result, selected, tool_identity
+from tools.ramulator import API_VERSION, installed_library, require_headers
 from tools.workspace import compress_log, maintenance_cli, prune_work, work_lock
 
 
@@ -162,19 +163,22 @@ def inspect_host():
     library_info = None
     if env.get("RAMULATOR2_DIR"):
         directory = Path(env["RAMULATOR2_DIR"]).resolve()
-        library = next((path / "libramulator.so" for path in
-                        (directory / "lib", directory / "lib64", *sorted((directory / "lib").glob("*-linux-gnu")))
-                        if (path / "libramulator.so").is_file()), directory / "lib/libramulator.so")
-        header = directory / "include/ramulator/frontend/frontend.h"
-        for path in (library, header):
-            if not path.is_file() or not os.access(path, os.R_OK):
-                errors.append(f"Missing or unreadable installed Ramulator input: {path}")
         env["RAMULATOR2_DIR"] = str(directory)
-        if library.is_file() and os.access(library, os.R_OK):
+        try:
+            require_headers(directory)
+            libdir = env.get("RAMULATOR2_LIBDIR")
+            library = installed_library(directory, Path(libdir).resolve() if libdir else None)
+            driver = Path(env.get("BAMBU_HLS", "")) / "share/panda/libmdpi/mdpi_driver.cpp"
+            if env.get("BAMBU_HLS") and (
+                not driver.is_file() or "bambu/legacy_config.h" not in driver.read_text(encoding="utf-8")
+            ):
+                errors.append(f"Installed Bambu MDPI does not support Ramulator {API_VERSION}: {driver}")
+            env["RAMULATOR2_LIBDIR"] = str(library.parent)
             with library.open("rb") as handle:
                 header = handle.read(20)
             elf64_x86_64 = header[:6] == b"\x7fELF\x02\x01" and header[18:20] == b"\x3e\x00"
-            library_info = {"path": str(library), "sha256": sha256(library), "elf64_x86_64": elf64_x86_64}
+            library_info = {"path": str(library), "sha256": sha256(library),
+                            "api_version": API_VERSION, "elf64_x86_64": elf64_x86_64}
             if not elf64_x86_64:
                 errors.append(f"Expected an ELF64 x86-64 libramulator.so: {library}")
             elif paths["ldd"] and platform.system() == "Linux":
@@ -182,6 +186,8 @@ def inspect_host():
                 library_info["ldd"] = result
                 if result["exit_code"] or "not found" in result["output"]:
                     errors.append("The loader could not resolve libramulator.so dependencies; see metadata.json")
+        except (OSError, ValueError) as exc:
+            errors.append(str(exc))
     for variable in ("OUT_LVL", "BAMBU_IPC_SIM_CMD", "RAMULATOR_OVERRIDE_CHANNELS"):
         env.pop(variable, None)
     return paths, versions, env, library_info, errors
@@ -475,12 +481,12 @@ def main(suite, tag, config, dry_run, board="xcu250", keep_work=False, case_name
             "user": getpass.getuser(), "host": socket.gethostname(),
             "os": platform.platform(), "os_release": distro, "architecture": platform.machine(),
             "environment": {key: os.environ.get(key) for key in (
-                "BAMBU_HLS", "BAMBU_HLS_BACKEND_PATH", "RAMULATOR2_DIR", "RAMULATOR2_CONFIG",
+                "BAMBU_HLS", "BAMBU_HLS_BACKEND_PATH", "RAMULATOR2_DIR", "RAMULATOR2_LIBDIR", "RAMULATOR2_CONFIG",
                 "RAMULATOR_OVERRIDE_CHANNELS", "LD_LIBRARY_PATH", "CPLUS_INCLUDE_PATH",
                 "BENCHMARK_ARCHIVES", "CLOCK_PERIOD_NS", "CASE_TIMEOUT_S", "PATH",
             )},
             "effective_environment": {key: env.get(key) for key in (
-                "RAMULATOR2_DIR", "LD_LIBRARY_PATH", "CPLUS_INCLUDE_PATH", "RAMULATOR_OVERRIDE_CHANNELS",
+                "RAMULATOR2_DIR", "RAMULATOR2_LIBDIR", "LD_LIBRARY_PATH", "CPLUS_INCLUDE_PATH", "RAMULATOR_OVERRIDE_CHANNELS",
             )},
             "config_override": str(Path(config_override).resolve()) if config_override else None,
             "tool_paths": paths, "tool_versions": versions, "ramulator_library": library,

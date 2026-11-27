@@ -3,8 +3,9 @@
 # Author: Jesun Firoz <jesun.firoz@pnnl.gov>
 
 # Ramulator2 configuration for the candidate-release AXI + Ramulator2 smoke test.
-# DDR4-2400, single channel.  clock_ratio scales Ramulator's DRAM clock relative
-# to the DUT clock (set via --clock-period in the test script).
+# DDR4-2400, single channel. With Bambu's Ramulator 2.1 driver, the test
+# clock period and the DRAM preset tCK determine the effective ratio.
+# The clock_ratio field retains the value used by the legacy fixture.
 Frontend:
   impl: GEM5
 

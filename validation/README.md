@@ -11,8 +11,10 @@ The experimental calibration runner uses the Ferrandi integration pinned in
 [toolchain.json](../fpga/toolchain.json). For a compatible installation set
 FPGA_BAMBU and FPGA_BAMBU_SOURCE or supply FPGA_TOOLCHAIN_RECEIPT using the
 [FPGA guide](../fpga/README.md). Set RAMULATOR2_DIR to the installed library
-prefix and FPGA_RAMULATOR_RECEIPT to its
-[build receipt](profiles/ramulator-receipt.example.json).
+prefix for the pinned 2.1 build and FPGA_RAMULATOR_RECEIPT to its
+[build receipt](profiles/ramulator-receipt.example.json). Use the upstream
+preparation script's `provenance.json` and build logs as build evidence, and
+record the SHA-256 of the installed `libramulator.so` selected for the run.
 
 Run from the repository root.
 

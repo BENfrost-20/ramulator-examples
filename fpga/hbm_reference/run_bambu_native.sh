@@ -32,8 +32,9 @@ case "$#" in
 esac
 
 repo=$(cd -- "$(dirname -- "$0")/../.." && pwd)
-bambu="${FPGA_BAMBU:-$HOME/thesis/PandA-bambu-ferrandi/install/bin/bambu}"
-settings="${FPGA_BAMBU_SETTINGS:-$HOME/thesis/PandA-bambu-ferrandi/install/settings.sh}"
+toolchain="$HOME/thesis/toolchain-ramulator21-dca0351"
+bambu="${FPGA_BAMBU:-$toolchain/bambu-install/bin/bambu}"
+settings="${FPGA_BAMBU_SETTINGS:-$toolchain/bambu-install/settings.sh}"
 clang_bin="${FPGA_CLANG_BIN:-$HOME/thesis/toolchains/clang-13/bin}"
 verilator="${FPGA_VERILATOR:-/opt/verilator/verilator-5.030/bin/verilator}"
 mkdir -p "$repo/.fpga"
@@ -55,7 +56,7 @@ unset RAMULATOR2_CONFIG RAMULATOR_OVERRIDE_CHANNELS VERILATOR_ROOT BAMBU_IPC_SIM
 if [[ -n "$ramulator_config" ]]; then
   cp "$ramulator_config" ramulator-config.yaml
   export RAMULATOR2_CONFIG="$PWD/ramulator-config.yaml"
-  export RAMULATOR2_DIR="${RAMULATOR2_DIR:-$HOME/thesis/ramulator-ferrandi-20261116-105256/install}"
+  export RAMULATOR2_DIR="${RAMULATOR2_DIR:-$toolchain/ramulator-install}"
   export RAMULATOR_OVERRIDE_CHANNELS=0
   sha256sum ramulator-config.yaml
 fi

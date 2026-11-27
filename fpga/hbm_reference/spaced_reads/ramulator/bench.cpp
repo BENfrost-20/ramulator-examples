@@ -62,8 +62,8 @@ int main(int argc, char** argv) try {
   if (argc!=3) throw std::runtime_error("Pass YAML and warmup cycles");
   auto warmup=std::stoul(argv[2]);
   if (warmup>=390) throw std::runtime_error("Warmup outside 0–389 cycles");
-  timing=std::make_unique<RamulatorTiming>(argv[1]);
-  if (timing->ratio()!=9) throw std::runtime_error("Expected nine DRAM ticks per kernel cycle");
+  timing=std::make_unique<RamulatorTiming>(argv[1], 10);
+  std::cout << "DRAM ticks per 100 MHz kernel cycle: " << timing->ratio() << '\n';
   model_data_base=0x40000000ULL;
   trace_n=1000;
   axi_trace.open("ramulator-axi.jsonl");
@@ -97,6 +97,7 @@ int main(int argc, char** argv) try {
   }
   out.close();
   if (!out) throw std::runtime_error("Incomplete latency CSV");
+  timing.reset();
   std::cout<<"PASS 1000 AXI reads with Ramulator, warmup="<<warmup<<"\n";
   return 0;
 } catch (const std::exception& e) {

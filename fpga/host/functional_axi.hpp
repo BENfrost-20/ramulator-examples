@@ -46,6 +46,7 @@ struct Port {
     struct Address {
         std::uint64_t value;
         unsigned id;
+        int bytes;
     };
     struct Data {
         unsigned value;
@@ -85,7 +86,7 @@ struct Port {
 
     void ar(std::uint64_t address, unsigned id, unsigned size, unsigned len, std::uint64_t cycle) {
         check(address, size, len);
-        pending_read = Address{address, id};
+        pending_read = Address{address, id, 1 << size};
         ++reads;
 #ifndef FPGA_WITH_RAMULATOR
         read_due = cycle + 2 + cycle % 5;
@@ -96,7 +97,7 @@ struct Port {
     void write_addr(std::uint64_t address, unsigned id, unsigned size, unsigned len,
                     std::uint64_t cycle) {
         check(address, size, len);
-        aw.push_back({address, id});
+        aw.push_back({address, id, 1 << size});
         ++writes;
         trace_axi("AW", cycle, address, id);
     }
@@ -122,7 +123,7 @@ struct Port {
         if (pending_read && !read_submitted) {
             const auto request = *pending_read;
             const auto address = model_address(request.value);
-            read_submitted = timing->read(address, [this](Ramulator::Request&) {
+            read_submitted = timing->read(address, request.bytes, [this](Ramulator::Request&) {
                 read_completed_tick = timing->ticks();
             });
             if (read_submitted) {
@@ -142,7 +143,7 @@ struct Port {
         if (!bv && !aw.empty() && !w.empty()) {
             const auto request = aw.front();
             const auto address = model_address(request.value);
-            if (timing->write(address)) {
+            if (timing->write(address, request.bytes)) {
                 commit_write();
                 trace_axi("write_accepted", cycle, request.value, request.id, address);
                 bv = true;

@@ -15,6 +15,7 @@ from fpga.prepare import digest,layout
 from fpga.provenance import verify_bambu
 from fpga.run import board,tool,write
 from tools.execution import stage_case,launch,measure
+from tools.ramulator import installed_library, require_headers
 
 
 def ramulator_install():
@@ -23,10 +24,11 @@ def ramulator_install():
     if not receipt:raise ValueError('Set FPGA_RAMULATOR_RECEIPT linking the installed ferrandi/ramulator2 library hash to the pinned build; no Jesun fallback')
     r=json.loads(Path(receipt).read_text());selected=json.loads((ROOT/'fpga/toolchain.json').read_text())['ramulator2']
     if r.get('repository')!=selected['repository'] or r.get('revision')!=selected['revision']:raise ValueError('Ramulator receipt does not identify the selected Ferrandi dependency')
-    libs=[p for pattern in ('lib/libramulator.so','lib64/libramulator.so','lib/*/libramulator.so') for p in prefix.glob(pattern)]
-    if len(libs)!=1 or not (prefix/'include/ramulator/base/config.h').is_file():raise ValueError('Expected standard Ferrandi Ramulator install layout with one library')
-    if digest(libs[0])!=r.get('library_sha256') or not r.get('build_evidence'):raise ValueError('Ramulator binary/source evidence missing or library changed')
-    return dict(r,library=str(libs[0]))
+    require_headers(prefix)
+    library = installed_library(prefix, os.environ.get('RAMULATOR2_LIBDIR')).absolute()
+    if digest(library) != r.get('library_sha256') or not r.get('build_evidence'):
+        raise ValueError('Ramulator binary/source evidence missing or library changed')
+    return dict(r, library=str(library), version=selected['version'])
 
 
 def execute(case,args,provenance,dependency):
@@ -49,7 +51,9 @@ def execute(case,args,provenance,dependency):
         if flag not in case['flags']:case['flags'].append(flag)
     argv,yaml=stage_case(case,snapshot,args.config,tool('bambu'),b)
     # No channel override: modeled channels and HLS banks are distinct.
-    env=dict(os.environ,RAMULATOR2_CONFIG=str(yaml),RAMULATOR_OVERRIDE_CHANNELS='0')
+    env=dict(os.environ,RAMULATOR2_CONFIG=str(yaml),RAMULATOR_OVERRIDE_CHANNELS='0',
+             RAMULATOR2_DIR=str(Path(os.environ['RAMULATOR2_DIR']).resolve()),
+             RAMULATOR2_LIBDIR=str(Path(dependency['library']).parent))
     for name in ('BAMBU_IPC_SIM_CMD','OUT_LVL'):env.pop(name,None)
     log=out/'cosimulation.log';code=launch(argv,out,log,env,args.timeout)
     with log.open() as stream:reads,writes,completed,ticks,initialized,reported,mismatch=measure(stream)

@@ -1,6 +1,6 @@
 # EXPERIMENTAL: one Ramulator HBM2 channel includes two pseudochannels.
-# Not a U55C HBM2e/platform match. At kernel=100 MHz, ratio=10 -> 1 GHz ticks.
-# Requires an installed MDPI bridge with verified ratio semantics.
+# Experimental HBM2 geometry. Bambu 2.1 derives the DRAM tick rate
+# from the selected timing preset; clock_ratio is the legacy value.
 Frontend:
   impl: GEM5
 MemorySystem:
