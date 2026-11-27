@@ -65,6 +65,27 @@ else
     fi
 fi
 printf 'Python: %s (%s)\n' "$python3_exe" "$("$python3_exe" --version)"
+if [[ "$mode" == replay ]]; then
+    verilator=
+    candidates=(/opt/verilator/verilator-5.052/bin/verilator
+                /opt/verilator/verilator-5.030/bin/verilator verilator)
+    if [[ -n "${FPGA_VERILATOR:-}" ]]; then
+        candidates=("$FPGA_VERILATOR")
+    fi
+    for candidate in "${candidates[@]}"; do
+        path=$(command -v -- "$candidate") || continue
+        if "$path" --build --version >/dev/null 2>&1; then
+            verilator=$path
+            break
+        fi
+    done
+    if [[ -z "$verilator" ]]; then
+        printf 'Set FPGA_VERILATOR to a working Verilator executable that supports --build. Tried: %s\n' "${candidates[*]}" >&2
+        exit 2
+    fi
+    printf 'Verilator: %s (%s)\n' "$verilator" "$("$verilator" --version)"
+fi
+
 launcher=()
 if command -v ccache >/dev/null; then
     cache=$(command -v ccache)
@@ -126,13 +147,6 @@ if [[ "$mode" == bambu ]]; then
     exit
 fi
 
-if [[ -n "${FPGA_VERILATOR:-}" ]]; then
-    verilator=$FPGA_VERILATOR
-elif [[ -x /opt/verilator/verilator-5.052/bin/verilator ]]; then
-    verilator=/opt/verilator/verilator-5.052/bin/verilator
-else
-    verilator=$(command -v verilator)
-fi
 out=$(mktemp -d "$work/u55c-replay.XXXXXX")
 printf 'Replay output: %s\n' "$out"
 {

@@ -19,8 +19,12 @@ existing U55C RTL using Verilator. The second command completes the matching Bam
 installation using the same workspace. Its Ramulator build is incremental.
 Each replay gets separate output. Execute the two commands sequentially.
 The default workspace is `~/thesis/toolchain-ramulator21-dca0351`.
-Set `FPGA_VERILATOR` to a specific Verilator binary if needed. The script uses the
-existing GCC 13, Clang, CMake, Boost and ccache installations when available.
+The replay requires a Verilator executable with `--build` support. The script
+checks the Ferrandi installations under `/opt/verilator`, including the
+`verilator-5.030` directory that houses the recorded Verilator 5.052 build,
+then checks `PATH`. Set `FPGA_VERILATOR` to select a specific executable.
+The script uses the existing GCC 13, Clang, CMake, Boost and ccache installations
+when available.
 If the system Python is older than 3.10, set `PYTHON3=/absolute/path/to/python3.11`
 before running the commands. That interpreter is used by CMake, Verilator and
 the comparison scripts. A new Python can be installed in your home directory
